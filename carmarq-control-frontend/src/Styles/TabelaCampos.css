@@ -1,0 +1,64 @@
+.timer-control {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.btn-timer {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    border-radius: 8px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    color: white;
+    transition: opacity 0.2s;
+}
+
+.btn-start {
+    background-color: var(--success-color);
+}
+
+.btn-stop {
+    background-color: var(--danger-color);
+}
+
+.btn-manual {
+    padding: 0 1.5rem;
+}
+
+.simple-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.simple-table th {
+    text-align: left;
+    padding: 0.75rem;
+    border-bottom: 2px solid var(--border-color);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.simple-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.95rem;
+}
+
+.font-mono {
+    font-family: monospace;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.row-total td {
+    background-color: #f9fafb;
+    border-top: 2px solid var(--border-color);
+}

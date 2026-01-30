@@ -1,0 +1,268 @@
+/* src/Styles/Usuarios.css */
+
+/* --- Cabeçalho da Página --- */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.page-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-color, #1f2937);
+    margin-bottom: 0.25rem;
+}
+
+.page-subtitle {
+    color: var(--text-muted, #6b7280);
+    font-size: 0.95rem;
+}
+
+/* --- Grid de Cards --- */
+.users-grid {
+    display: grid;
+    /* Cria colunas automáticas com largura mínima de 320px */
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+    padding-bottom: 2rem;
+}
+
+/* --- Estilo do Card de Usuário --- */
+.user-card {
+    background: white;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 12px; /* Cantos mais arredondados */
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    position: relative;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.user-card:hover {
+    transform: translateY(-4px); /* Efeito de elevação */
+    box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1);
+    border-color: var(--primary-color, #10b981);
+}
+
+/* Avatar (Círculo com a Inicial) */
+.user-avatar-large {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background-color: var(--primary-light, #d1fae5);
+    color: var(--primary-color, #10b981);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    font-weight: 700;
+    flex-shrink: 0; /* Impede que o avatar amasse */
+    border: 2px solid white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+/* Informações de Texto */
+.user-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 1; /* Ocupa o resto do espaço */
+}
+
+.user-info h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-color, #1f2937);
+    margin-bottom: 0.2rem;
+}
+
+.user-info p {
+    font-size: 0.9rem;
+    color: var(--text-muted, #6b7280);
+    margin-bottom: 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* Corta email longo com ... */
+    max-width: 180px;
+}
+
+/* Badges de Função (Role) */
+.role-badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.role-tecnico { background: #eff6ff; color: #3b82f6; border: 1px solid #dbeafe; }
+.role-financeiro { background: #fff7ed; color: #ea580c; border: 1px solid #ffedd5; }
+.role-proprietario { background: #f0fdf4; color: #15803d; border: 1px solid #dcfce7; }
+
+/* Botão de Excluir (Lixeira) */
+.btn-icon-danger {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: transparent;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 50%;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-icon-danger:hover {
+    background-color: #fee2e2;
+    color: #ef4444;
+}
+
+/* --- Modal (Janela de Cadastro) --- */
+.modal-overlay {
+    position: fixed;
+    inset: 0; /* Ocupa a tela toda */
+    background-color: rgba(0, 0, 0, 0.5); /* Fundo escuro */
+    backdrop-filter: blur(4px); /* Desfoque moderno */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.modal-content {
+    background: white;
+    width: 90%;
+    max-width: 480px;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: slideUp 0.3s ease-out;
+    border: 1px solid var(--border-color);
+}
+
+.modal-content h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    color: var(--text-color);
+    text-align: center;
+    border-bottom: 1px solid #f3f4f6;
+    padding-bottom: 1rem;
+}
+
+/* Formulários no Modal */
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+}
+
+.form-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+    background-color: #fff;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--primary-color, #10b981);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+/* Botões do Modal */
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #f3f4f6;
+}
+
+.btn-secondary {
+    background: white;
+    border: 1px solid #d1d5db;
+    color: #374151;
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.btn-secondary:hover {
+    background: #f9fafb;
+}
+
+/* Animações */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.card-actions {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Estilo base para os botões de ícone */
+.btn-icon {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 50%; /* Círculo perfeito */
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Botão de Editar (Azul/Cinza) */
+.btn-edit {
+    color: #6b7280;
+}
+.btn-edit:hover {
+    background-color: #f3f4f6;
+    color: var(--primary-color, #10b981);
+}
+
+/* Botão de Excluir (Vermelho) */
+.btn-danger {
+    color: #9ca3af;
+}
+.btn-danger:hover {
+    background-color: #fee2e2;
+    color: #ef4444;
+}

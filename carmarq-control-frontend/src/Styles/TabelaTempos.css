@@ -1,0 +1,73 @@
+.times-container {
+    margin-top: 1rem;
+}
+
+.timer-control {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.btn-timer {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    border-radius: 8px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    color: white;
+    transition: opacity 0.2s;
+}
+
+.btn-start {
+    background-color: #10b981; /* Verde */
+}
+
+.btn-stop {
+    background-color: #ef4444; /* Vermelho */
+}
+
+.btn-manual {
+    padding: 0 1.5rem;
+    background-color: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.simple-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.simple-table th {
+    text-align: left;
+    padding: 0.75rem;
+    border-bottom: 2px solid #e5e7eb;
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+
+.simple-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 0.95rem;
+}
+
+.font-mono {
+    font-family: monospace;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.row-total td {
+    background-color: #f9fafb;
+    border-top: 2px solid #e5e7eb;
+    font-weight: bold;
+}

@@ -1,0 +1,93 @@
+.add-peca-form {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background-color: #f9fafb;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+.input-peca {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+.input-qtd {
+    width: 80px;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+.btn-add {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.lista-pecas {
+    list-style: none;
+    padding: 0;
+}
+
+.peca-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.peca-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.peca-nome {
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.peca-valor {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.peca-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.badge-qtd {
+    background: #e0f2fe;
+    color: #0284c7;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: bold;
+}
+
+.peca-total {
+    font-weight: bold;
+}
+
+.btn-remove {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.btn-remove:hover {
+    color: var(--danger-color);
+}

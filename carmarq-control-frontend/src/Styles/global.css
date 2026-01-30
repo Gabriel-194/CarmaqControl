@@ -1,0 +1,82 @@
+:root {
+    /* IDENTIDADE CARMARQ CONTROL - TEMA VERDE */
+    --primary-color: #10b981; /* Verde Esmeralda Principal */
+    --primary-hover: #059669; /* Verde Mais Escuro para Hover */
+    --primary-light: #d1fae5; /* Verde Bem Claro para fundos */
+
+    --background-color: #f8f9fa;
+    --card-bg: #ffffff;
+    --text-color: #1f2937;
+    --text-muted: #6b7280;
+    --border-color: #e5e7eb;
+    --danger-color: #ef4444;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+/* Utilitários */
+.icon {
+    width: 20px;
+    height: 20px;
+}
+
+/* Botão Padrão (Agora será VERDE por causa da variável acima) */
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 0.75rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+}
+
+.btn-secondary {
+    background-color: white;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.page-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--text-color);
+}
+
+/* Badges de Status Globais */
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.status-aberto { background-color: #e0f2fe; color: #0284c7; } /* Azul mantido apenas para status 'Aberto' para contraste, ou mude se quiser */
+.status-em-andamento { background-color: #fef3c7; color: #d97706; }
+.status-concluido { background-color: #d1fae5; color: #10b981; }
