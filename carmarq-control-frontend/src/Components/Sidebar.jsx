@@ -1,20 +1,20 @@
 import React from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, ClipboardList, LogOut, Users } from 'lucide-react'
-import { useAuth } from '../contexts/AuthContext' // Usa o contexto
+import { LayoutDashboard, ClipboardList, LogOut, Users, Building2, Cog } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
 import axios from 'axios'
 import '../Styles/Sidebar.css'
 
 export default function Sidebar() {
     const location = useLocation()
     const navigate = useNavigate()
-    const { user, checkAuth } = useAuth() // Pega dados da memória
+    const { user, checkAuth } = useAuth()
 
     const handleLogout = async () => {
         try {
             await axios.post('http://localhost:8080/api/auth/logout', {}, { withCredentials: true })
             localStorage.removeItem('userName')
-            await checkAuth() // Limpa o estado
+            await checkAuth()
             navigate('/')
         } catch (error) {
             console.error("Erro no logout", error)
@@ -26,7 +26,7 @@ export default function Sidebar() {
         return location.pathname === path ? 'nav-link active' : 'nav-link'
     }
 
-    // Se o usuário ainda não carregou, exibe skeleton ou nada
+    // Se o usuário ainda não carregou, não exibe
     if (!user) return null
 
     return (
@@ -46,7 +46,23 @@ export default function Sidebar() {
                     Ordens de Serviço
                 </Link>
 
-                {/* Verifica a ROLE direto da memória RAM */}
+                {/* Clientes — visível apenas para PROPRIETARIO e FINANCEIRO */}
+                {user.role !== 'TECNICO' && (
+                    <Link to="/clientes" className={getLinkClass('/clientes')}>
+                        <Building2 className="icon" />
+                        Clientes
+                    </Link>
+                )}
+
+                {/* Biblioteca de Máquinas — visível apenas para PROPRIETARIO e FINANCEIRO */}
+                {user.role !== 'TECNICO' && (
+                    <Link to="/maquinas" className={getLinkClass('/maquinas')}>
+                        <Cog className="icon" />
+                        Máquinas
+                    </Link>
+                )}
+
+                {/* Equipe — apenas PROPRIETARIO */}
                 {user.role === 'PROPRIETARIO' && (
                     <Link to="/usuarios" className={getLinkClass('/usuarios')}>
                         <Users className="icon" />

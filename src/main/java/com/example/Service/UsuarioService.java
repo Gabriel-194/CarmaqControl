@@ -1,6 +1,8 @@
 package com.example.Service;
 
 import com.example.DTOs.UserRegistrationDTO;
+import com.example.DTOs.UserResponseDTO;
+import com.example.DTOs.UserUpdateDTO;
 import com.example.Models.Usuario;
 import com.example.Repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
@@ -11,28 +13,34 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class UsuarioService implements UserDetailsService {
 
     private final UsuarioRepository usuarioRepository;
-    // Criamos o encoder manualmente aqui para evitar dependência circular
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    // Obrigatório para o Spring Security validar o login
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         return usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado: " + email));
     }
 
-    // CRUD Básico
-    public List<Usuario> findAll() {
-        return usuarioRepository.findAll();
+    public List<UserResponseDTO> findAll() {
+        return usuarioRepository.findAll().stream()
+                .map(UserResponseDTO::new)
+                .collect(Collectors.toList());
     }
 
-    public Usuario createUsuario(UserRegistrationDTO dto) {
+    public UserResponseDTO findById(Long id) {
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado com ID: " + id));
+        return new UserResponseDTO(usuario);
+    }
+
+    public UserResponseDTO createUsuario(UserRegistrationDTO dto) {
         if (usuarioRepository.existsByEmail(dto.getEmail())) {
             throw new RuntimeException("Email já cadastrado");
         }
@@ -40,33 +48,64 @@ public class UsuarioService implements UserDetailsService {
         Usuario novoUsuario = Usuario.builder()
                 .nome(dto.getNome())
                 .email(dto.getEmail())
-                .senha(passwordEncoder.encode(dto.getSenha())) // Hash da senha
+                .senha(passwordEncoder.encode(dto.getSenha()))
                 .role(dto.getRole().toUpperCase())
                 .telefone(dto.getTelefone())
                 .ativo(true)
                 .build();
 
-        return usuarioRepository.save(novoUsuario);
+        Usuario saved = usuarioRepository.save(novoUsuario);
+        return new UserResponseDTO(saved);
     }
 
-    public Usuario updateUsuario(Long id, UserRegistrationDTO dto) {
+    public UserResponseDTO updateUsuario(Long id, UserUpdateDTO dto) {
         Usuario usuario = usuarioRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado com ID: " + id));
 
-        usuario.setNome(dto.getNome());
-        usuario.setEmail(dto.getEmail());
-        usuario.setRole(dto.getRole().toUpperCase());
-        usuario.setTelefone(dto.getTelefone());
+        if (dto.getNome() != null && !dto.getNome().isBlank()) {
+            usuario.setNome(dto.getNome());
+        }
+        if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
+            // Verifica se o novo email já existe em outro usuário
+            if (!usuario.getEmail().equals(dto.getEmail()) && usuarioRepository.existsByEmail(dto.getEmail())) {
+                throw new RuntimeException("Email já cadastrado em outra conta");
+            }
+            usuario.setEmail(dto.getEmail());
+        }
+        if (dto.getRole() != null && !dto.getRole().isBlank()) {
+            usuario.setRole(dto.getRole().toUpperCase());
+        }
+        if (dto.getTelefone() != null) {
+            usuario.setTelefone(dto.getTelefone());
+        }
 
-        // Atualiza a senha somente se foi enviada
+        // Atualiza a senha somente se foi enviada (não blank)
         if (dto.getSenha() != null && !dto.getSenha().isBlank()) {
             usuario.setSenha(passwordEncoder.encode(dto.getSenha()));
         }
 
-        return usuarioRepository.save(usuario);
+        Usuario updated = usuarioRepository.save(usuario);
+        return new UserResponseDTO(updated);
     }
 
     public void deleteUsuario(Long id) {
-        usuarioRepository.deleteById(id);
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado com ID: " + id));
+        usuario.setAtivo(false);
+        usuarioRepository.save(usuario);
+    }
+
+    public void restoreUsuario(Long id) {
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado com ID: " + id));
+        usuario.setAtivo(true);
+        usuarioRepository.save(usuario);
+    }
+
+    // Busca apenas técnicos ativos (para seleção na criação de OS)
+    public List<UserResponseDTO> findTechnicians() {
+        return usuarioRepository.findByRoleAndAtivoTrue("TECNICO").stream()
+                .map(UserResponseDTO::new)
+                .collect(Collectors.toList());
     }
 }

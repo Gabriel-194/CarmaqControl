@@ -13,7 +13,6 @@ export default function Dashboard() {
     if (!user) return null
 
     const renderContent = () => {
-        // Agora user.role existe!
         switch (user.role) {
             case 'PROPRIETARIO':
                 return <ProprietarioDashboard />

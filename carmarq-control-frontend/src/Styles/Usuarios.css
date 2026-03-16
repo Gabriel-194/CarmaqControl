@@ -234,6 +234,7 @@
     right: 1rem;
     display: flex;
     gap: 0.5rem;
+    z-index: 10;
 }
 
 /* Estilo base para os botões de ícone */

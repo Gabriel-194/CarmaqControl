@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import Sidebar from '../Components/Sidebar'
 import { toast } from '../Components/ui/Toaster'
-import { Plus, Trash2, UserPlus, Pencil, X } from 'lucide-react' // Adicionado Pencil e X
+import { Plus, Trash2, UserPlus, Pencil, X, RefreshCw } from 'lucide-react'
+import axios from 'axios'
 import '../Styles/Usuarios.css'
 
 export default function Usuarios() {
@@ -13,7 +14,8 @@ export default function Usuarios() {
     const [editingUser, setEditingUser] = useState(null)
 
     // Form do usuário
-    const [formData, setFormData] = useState({ nome: '', email: '', role: 'TECNICO', senha: '' })
+    const [formData, setFormData] = useState({ nome: '', email: '', telefone: '', role: 'TECNICO', senha: '' })
+    const [formErrors, setFormErrors] = useState({})
 
     useEffect(() => {
         carregarUsuarios()
@@ -21,8 +23,8 @@ export default function Usuarios() {
 
     async function carregarUsuarios() {
         try {
-            const dados = await api.getUsuarios()
-            setUsuarios(dados)
+            const response = await axios.get('http://localhost:8080/api/users', { withCredentials: true })
+            setUsuarios(response.data)
         } catch (err) {
             toast('Erro ao carregar usuários', 'error')
         } finally {
@@ -44,6 +46,7 @@ export default function Usuarios() {
         setFormData({
             nome: user.nome,
             email: user.email,
+            telefone: user.telefone || '',
             role: user.role,
             senha: '' // Senha opcional na edição
         })
@@ -51,43 +54,60 @@ export default function Usuarios() {
     }
 
     const handleDeleteUser = async (id) => {
-        if(window.confirm("Tem certeza que deseja remover este usuário?")) {
-            await api.deleteUsuario(id)
-            toast('Usuário removido', 'success')
-            carregarUsuarios()
+        if(window.confirm("Tem certeza que deseja desativar este usuário?")) {
+            try {
+                await axios.delete(`http://localhost:8080/api/users/${id}`, { withCredentials: true })
+                toast('Usuário desativado', 'success')
+                carregarUsuarios()
+            } catch (err) {
+                toast('Erro ao desativar usuário', 'error')
+            }
+        }
+    }
+
+    const handleRestoreUser = async (id) => {
+        if(window.confirm("Deseja restaurar o acesso deste usuário?")) {
+            try {
+                await axios.put(`http://localhost:8080/api/users/${id}/restore`, {}, { withCredentials: true })
+                toast('Usuário restaurado com sucesso', 'success')
+                carregarUsuarios()
+            } catch (err) {
+                toast('Erro ao restaurar usuário', 'error')
+            }
         }
     }
 
     const handleSave = async (e) => {
         e.preventDefault()
+        setFormErrors({})
 
-        // Validação básica
+        // Validação básica local (opcional agora que temos backend forte, mas bom deixar)
         if(!formData.nome || !formData.email) {
             toast('Nome e E-mail são obrigatórios', 'error')
             return
         }
 
-        // Se for criação, senha é obrigatória. Se for edição, é opcional.
-        if(!editingUser && !formData.senha) {
-            toast('Senha é obrigatória para novos usuários', 'error')
-            return
-        }
-
         try {
             if (editingUser) {
-                // MODO EDIÇÃO
-                await api.updateUsuario(editingUser.id, formData)
+                await axios.put(`http://localhost:8080/api/users/${editingUser.id}`, formData, { withCredentials: true })
                 toast(`Usuário ${formData.nome} atualizado!`, 'success')
             } else {
-                // MODO CRIAÇÃO
-                await api.createUsuario(formData)
+                await axios.post('http://localhost:8080/api/users', formData, { withCredentials: true })
                 toast(`Usuário ${formData.nome} cadastrado!`, 'success')
             }
 
             setShowModal(false)
             carregarUsuarios()
         } catch (error) {
-            toast('Erro ao salvar dados', 'error')
+            if (error.response && error.response.status === 400 && error.response.data.errors) {
+                setFormErrors(error.response.data.errors)
+                toast('Verifique os campos obrigatórios.', 'error')
+            } else if (error.response && error.response.status === 409) {
+                setFormErrors({ email: error.response.data.message })
+                toast(error.response.data.message, 'error')
+            } else {
+                toast('Erro ao salvar dados', 'error')
+            }
         }
     }
 
@@ -115,7 +135,7 @@ export default function Usuarios() {
                                     {user.nome[0].toUpperCase()}
                                 </div>
                                 <div className="user-info">
-                                    <h3>{user.nome}</h3>
+                                    <h3>{user.nome} {!user.ativo && <span style={{color:'red', fontSize:'12px'}}>(Inativo)</span>}</h3>
                                     <p title={user.email}>{user.email}</p>
                                     <span className={`role-badge role-${user.role.toLowerCase()}`}>
                                         {user.role}
@@ -124,20 +144,33 @@ export default function Usuarios() {
 
                                 {/* Ações do Card */}
                                 <div className="card-actions">
-                                    <button
-                                        className="btn-icon btn-edit"
-                                        title="Editar Usuário"
-                                        onClick={() => handleEditUser(user)}
-                                    >
-                                        <Pencil size={18} />
-                                    </button>
-                                    <button
-                                        className="btn-icon btn-danger"
-                                        title="Remover Usuário"
-                                        onClick={() => handleDeleteUser(user.id)}
-                                    >
-                                        <Trash2 size={18} />
-                                    </button>
+                                    {user.ativo ? (
+                                        <>
+                                            <button
+                                                className="btn-icon btn-edit"
+                                                title="Editar Usuário"
+                                                onClick={() => handleEditUser(user)}
+                                            >
+                                                <Pencil size={18} />
+                                            </button>
+                                            <button
+                                                className="btn-icon btn-danger"
+                                                title="Desativar Usuário"
+                                                onClick={() => handleDeleteUser(user.id)}
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <button
+                                            className="btn-icon"
+                                            style={{color: '#10b981', border: '1px solid #10b981', background: 'transparent'}}
+                                            title="Recuperar Usuário"
+                                            onClick={() => handleRestoreUser(user.id)}
+                                        >
+                                            <RefreshCw size={18} />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -160,18 +193,30 @@ export default function Usuarios() {
                                     <label>Nome Completo</label>
                                     <input
                                         type="text"
-                                        className="form-input"
+                                        className={`form-input ${formErrors.nome ? 'input-error' : ''}`}
                                         value={formData.nome}
                                         onChange={e => setFormData({...formData, nome: e.target.value})}
                                     />
+                                    {formErrors.nome && <span className="error-message">{formErrors.nome}</span>}
                                 </div>
                                 <div className="form-group">
                                     <label>E-mail de Acesso</label>
                                     <input
                                         type="email"
-                                        className="form-input"
+                                        className={`form-input ${formErrors.email ? 'input-error' : ''}`}
                                         value={formData.email}
                                         onChange={e => setFormData({...formData, email: e.target.value})}
+                                    />
+                                    {formErrors.email && <span className="error-message">{formErrors.email}</span>}
+                                </div>
+                                <div className="form-group">
+                                    <label>Telefone / WhatsApp</label>
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        placeholder="(00) 00000-0000"
+                                        value={formData.telefone}
+                                        onChange={e => setFormData({...formData, telefone: e.target.value})}
                                     />
                                 </div>
                                 <div className="form-group">

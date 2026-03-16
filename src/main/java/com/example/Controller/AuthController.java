@@ -60,7 +60,7 @@ public class AuthController {
             // AQUI ESTÁ A CORREÇÃO:
             // Retornamos apenas o essencial para a navegação funcionar
             response.put("valid", true);
-            response.put("role", user.getRole()); // Frontend precisa disso para o Dashboard
+            response.put("role", user.getRole() != null ? user.getRole().toUpperCase() : null); // Frontend precisa disso para o Dashboard
             response.put("nome", user.getNome()); // Frontend precisa disso para a Sidebar ("Olá, Fulano")
 
             return ResponseEntity.ok(response);

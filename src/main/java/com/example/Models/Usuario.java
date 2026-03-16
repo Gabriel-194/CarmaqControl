@@ -56,7 +56,9 @@ public class Usuario implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(this.role));
+        if (this.role == null) return List.of();
+        // Garante que role seja tratada em maiúsculas para match com @PreAuthorize
+        return List.of(new SimpleGrantedAuthority(this.role.toUpperCase()));
     }
 
     @Override

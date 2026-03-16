@@ -1,0 +1,177 @@
+/* src/Styles/Clients.css */
+
+.clients-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.clients-page-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--text-color, #1f2937);
+}
+
+.clients-container {
+    background: white;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+/* Estado de loading ou lista vazia */
+.clients-empty-state {
+    padding: 3rem 1.5rem;
+    text-align: center;
+    color: var(--text-muted, #6b7280);
+    font-size: 1rem;
+    background-color: #f9fafb;
+}
+
+/* Tabela de Clientes */
+.clients-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.clients-table th {
+    background-color: #f9fafb;
+    color: var(--text-muted, #6b7280);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.clients-table td {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    color: var(--text-color, #1f2937);
+    font-size: 0.875rem;
+    vertical-align: middle;
+}
+
+.clients-table tbody tr {
+    transition: background-color 0.2s ease-in-out;
+}
+
+.clients-table tbody tr:hover {
+    background-color: #f3f4f6; /* Efeito hover mais suave */
+}
+
+/* Textos da Tabela */
+.td-company {
+    font-weight: 600;
+    color: var(--text-color, #111827);
+}
+
+.td-contact {
+    color: var(--text-muted, #4b5563);
+}
+
+/* Botões de Ações na tabela */
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+.btn-edit {
+    color: #2563eb; /* Azul elegante */
+    background: none;
+    border: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.btn-edit:hover {
+    color: #1e40af;
+    text-decoration: underline;
+}
+
+.btn-delete {
+    color: var(--danger-color, #ef4444);
+    background: none;
+    border: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.btn-delete:hover {
+    color: #b91c1c;
+    text-decoration: underline;
+}
+
+/* Modais de Cliente */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 50;
+    backdrop-filter: blur(2px);
+}
+
+.modal-content {
+    background-color: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    width: 100%;
+    max-width: 500px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.modal-title {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: var(--text-color, #1f2937);
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.modal-form-group {
+    margin-bottom: 1rem;
+}
+
+.modal-form-group label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-color, #374151);
+    margin-bottom: 0.25rem;
+}
+
+.modal-input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-color, #d1d5db);
+    border-radius: 6px;
+    font-size: 0.875rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.modal-input:focus {
+    border-color: var(--primary-color, #10b981);
+    box-shadow: 0 0 0 3px var(--primary-light, #d1fae5);
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 2rem;
+}

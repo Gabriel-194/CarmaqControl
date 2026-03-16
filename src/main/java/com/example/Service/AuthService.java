@@ -45,7 +45,7 @@ public class AuthService {
 
         // 3. Gera o Token com claims extras
         Map<String, Object> extraClaims = new HashMap<>();
-        extraClaims.put("role", user.getRole());
+        extraClaims.put("role", user.getRole() != null ? user.getRole().toUpperCase() : null);
         extraClaims.put("id", user.getId());
         extraClaims.put("nome", user.getNome());
 
@@ -57,7 +57,7 @@ public class AuthService {
         Cookie jwtCookie = jwtService.createJwtCookie(token);
         response.addCookie(jwtCookie);
 
-        return new LoginResponseDTO(true, "Login realizado com sucesso", user.getNome(), user.getRole(), user.getId(), user.getEmail());
+        return new LoginResponseDTO(true, "Login realizado com sucesso", user.getNome(), user.getRole() != null ? user.getRole().toUpperCase() : null, user.getId(), user.getEmail());
     }
 
     public boolean validateToken(String token) {

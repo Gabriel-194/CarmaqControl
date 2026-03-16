@@ -1,21 +1,57 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Sidebar from '../Components/Sidebar'
-import { Search, Filter, Plus } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
+import { Search, Filter, Plus, Loader2, ClipboardList } from 'lucide-react'
+import axios from 'axios'
 import '../Styles/Ordens.css'
 
-const MOCK_ORDENS = [
-    { id: 1, cliente: 'Acme Corp', equipamento: 'Ar Condicionado Split', status: 'Em Andamento', tecnico: 'Carlos Silva', data: '28/10/2023' },
-    { id: 2, cliente: 'Padaria do João', equipamento: 'Refrigerador Industrial', status: 'Aberto', tecnico: 'Pendente', data: '29/10/2023' },
-    { id: 3, cliente: 'Tech Solutions', equipamento: 'Servidor Rack', status: 'Concluído', tecnico: 'Carlos Silva', data: '25/10/2023' },
-]
+const API_URL = 'http://localhost:8080/api/service-orders'
 
+// Página de listagem de Ordens de Serviço — conectada com API real
 export default function Ordens() {
     const navigate = useNavigate()
+    const { user } = useAuth()
+    const [ordens, setOrdens] = useState([])
+    const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
+    const [statusFilter, setStatusFilter] = useState('')
 
-    const handleRowClick = (id) => {
-        navigate(`/ordens/${id}`)
+    const fetchOrdens = async () => {
+        try {
+            const params = {}
+            if (statusFilter) params.status = statusFilter
+            const res = await axios.get(API_URL, { params, withCredentials: true })
+            setOrdens(res.data)
+        } catch (error) {
+            console.error('Erro ao carregar ordens', error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    useEffect(() => {
+        fetchOrdens()
+    }, [statusFilter])
+
+    const filtered = ordens.filter(os =>
+        (os.clientName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (os.technicianName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        String(os.id).includes(searchTerm)
+    )
+
+    // Mapeia status para label e classe CSS
+    const statusMap = {
+        'ABERTA': { label: 'Aberta', css: 'status-aberto' },
+        'EM_ANDAMENTO': { label: 'Em Andamento', css: 'status-em-andamento' },
+        'CONCLUIDA': { label: 'Concluída', css: 'status-concluido' },
+        'CANCELADA': { label: 'Cancelada', css: 'status-cancelada' },
+        'REQUER_INSPECAO': { label: 'Requer Inspeção', css: 'status-inspecao' }
+    }
+
+    const formatDate = (dateStr) => {
+        if (!dateStr) return '—'
+        return new Date(dateStr).toLocaleDateString('pt-BR')
     }
 
     return (
@@ -27,13 +63,14 @@ export default function Ordens() {
                         <h1 className="page-title">Ordens de Serviço</h1>
                         <p className="page-subtitle">Gerencie e acompanhe as solicitações</p>
                     </div>
-                    {/* ADICIONADO O ONCLICK AQUI */}
-                    <button
-                        className="btn-primary btn-success"
-                        onClick={() => navigate('/nova-os')}
-                    >
-                        <Plus size={20} /> Nova OS
-                    </button>
+                    {user?.role === 'PROPRIETARIO' && (
+                        <button
+                            className="btn-primary btn-success"
+                            onClick={() => navigate('/nova-os')}
+                        >
+                            <Plus size={20} /> Nova OS
+                        </button>
+                    )}
                 </header>
 
                 <div className="filters-bar">
@@ -47,41 +84,62 @@ export default function Ordens() {
                             className="search-input"
                         />
                     </div>
-                    <button className="btn-secondary">
-                        <Filter size={18} /> Filtros
-                    </button>
+                    <select
+                        className="btn-secondary"
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        style={{ cursor: 'pointer', minWidth: '150px' }}
+                    >
+                        <option value="">Todos os Status</option>
+                        <option value="ABERTA">Aberta</option>
+                        <option value="EM_ANDAMENTO">Em Andamento</option>
+                        <option value="CONCLUIDA">Concluída</option>
+                        <option value="CANCELADA">Cancelada</option>
+                        <option value="REQUER_INSPECAO">Requer Inspeção</option>
+                    </select>
                 </div>
 
-                <div className="table-container">
-                    <table className="data-table">
-                        <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Cliente</th>
-                            <th>Equipamento</th>
-                            <th>Técnico</th>
-                            <th>Data</th>
-                            <th>Status</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {MOCK_ORDENS.map((os) => (
-                            <tr key={os.id} onClick={() => handleRowClick(os.id)}>
-                                <td>#{os.id}</td>
-                                <td className="font-bold">{os.cliente}</td>
-                                <td>{os.equipamento}</td>
-                                <td>{os.tecnico}</td>
-                                <td>{os.data}</td>
-                                <td>
-                                    <span className={`status-badge status-${os.status.toLowerCase().replace(/ /g, '-')}`}>
-                                    {os.status}
-                                    </span>
-                                </td>
-                            </tr>
-                        ))}
-                        </tbody>
-                    </table>
-                </div>
+                {loading ? (
+                    <div style={{ textAlign: 'center', padding: '3rem' }}>
+                        <Loader2 className="animate-spin" size={32} /> Carregando...
+                    </div>
+                ) : filtered.length === 0 ? (
+                    <div className="empty-state">
+                        <ClipboardList size={48} style={{ color: 'var(--text-muted)' }} />
+                        <p>Nenhuma ordem de serviço encontrada.</p>
+                    </div>
+                ) : (
+                    <div className="table-container">
+                        <table className="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Cliente</th>
+                                    <th>Máquina</th>
+                                    <th>Técnico</th>
+                                    <th>Data</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filtered.map((os) => (
+                                    <tr key={os.id} onClick={() => navigate(`/ordens/${os.id}`)}>
+                                        <td>#{os.id}</td>
+                                        <td className="font-bold">{os.clientName}</td>
+                                        <td>{os.machineName}</td>
+                                        <td>{os.technicianName}</td>
+                                        <td>{formatDate(os.openedAt)}</td>
+                                        <td>
+                                            <span className={`status-badge ${statusMap[os.status]?.css || ''}`}>
+                                                {statusMap[os.status]?.label || os.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </main>
         </div>
     )

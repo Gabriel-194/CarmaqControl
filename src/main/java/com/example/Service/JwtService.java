@@ -25,12 +25,9 @@ public class JwtService {
     @Value("${jwt.expiration}")
     private long jwtExpiration;
 
-    // --- LÓGICA DE GERAR CHAVE IGUAL AO ARENA CONNECT ---
     private SecretKey getSignInKey() {
-        // Isso permite usar hífens e qualquer texto como senha
         return Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
     }
-    // ----------------------------------------------------
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
