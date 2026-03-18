@@ -3,8 +3,11 @@ package com.example.Service;
 import com.example.DTOs.MachineRequestDTO;
 import com.example.DTOs.MachineResponseDTO;
 import com.example.Models.Machine;
+import com.example.Models.Usuario;
 import com.example.Repository.MachineRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,12 +23,22 @@ public class MachineService {
 
     @Transactional(readOnly = true)
     public List<MachineResponseDTO> getAllMachines(Boolean includeInactive) {
-        if (Boolean.TRUE.equals(includeInactive)) {
-            return machineRepository.findAll().stream()
-                    .map(this::mapToDTO)
-                    .collect(Collectors.toList());
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario currentUser = (Usuario) auth.getPrincipal();
+        String role = currentUser.getRole();
+
+        List<Machine> machines;
+
+        if ("TECNICO".equals(role)) {
+            // Técnicos veem apenas máquinas de suas OSs
+            machines = machineRepository.findAllByTechnicianId(currentUser.getId());
+        } else if (Boolean.TRUE.equals(includeInactive)) {
+            machines = machineRepository.findAll();
+        } else {
+            machines = machineRepository.findAllByActiveTrue();
         }
-        return machineRepository.findAllByActiveTrue().stream()
+
+        return machines.stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }

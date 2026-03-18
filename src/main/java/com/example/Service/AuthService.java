@@ -11,6 +11,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -34,14 +35,34 @@ public class AuthService {
 
         Usuario user = userOpt.get();
 
-        // 2. Verifica a senha
-        if (!passwordEncoder.matches(dto.getSenha(), user.getSenha())) {
-            return new LoginResponseDTO(false, "Email ou senha incorretos", null, null, null, null);
+        // 2. Verifica se a conta está bloqueada
+        if (user.getAccountLockedUntil() != null && user.getAccountLockedUntil().isAfter(LocalDateTime.now())) {
+            return new LoginResponseDTO(false, "Conta bloqueada por excesso de tentativas falhas. Tente novamente mais tarde.", null, null, null, null);
         }
 
         if (!user.getAtivo()) {
             return new LoginResponseDTO(false, "Usuário desativado", null, null, null, null);
         }
+
+        // 3. Verifica a senha
+        if (!passwordEncoder.matches(dto.getSenha(), user.getSenha())) {
+            int attempts = user.getFailedLoginAttempts() != null ? user.getFailedLoginAttempts() + 1 : 1;
+            user.setFailedLoginAttempts(attempts);
+            
+            if (attempts >= 5) {
+                user.setAccountLockedUntil(LocalDateTime.now().plusMinutes(15));
+                usuarioRepository.save(user);
+                return new LoginResponseDTO(false, "Conta bloqueada por 15 minutos devido a múltiplas tentativas falhas.", null, null, null, null);
+            }
+            
+            usuarioRepository.save(user);
+            return new LoginResponseDTO(false, "Email ou senha incorretos", null, null, null, null);
+        }
+
+        // 4. Login bem-sucedido: reseta tentativas e limpa bloqueio
+        user.setFailedLoginAttempts(0);
+        user.setAccountLockedUntil(null);
+        usuarioRepository.save(user);
 
         // 3. Gera o Token com claims extras
         Map<String, Object> extraClaims = new HashMap<>();

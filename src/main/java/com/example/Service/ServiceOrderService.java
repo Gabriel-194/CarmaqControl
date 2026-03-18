@@ -11,6 +11,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,34 +29,23 @@ public class ServiceOrderService {
     private final UsuarioRepository usuarioRepository;
     private final ServicePartRepository servicePartRepository;
 
-    // Retorna OS filtrando por role do usuário logado
+    // Retorna OS filtrando por role do usuário logado e aplicando filtros de busca/data
     @Transactional(readOnly = true)
-    public List<ServiceOrderResponseDTO> getAllServiceOrders(String statusFilter) {
+    public Page<ServiceOrderResponseDTO> getAllServiceOrders(String search, String status, Integer month, Integer year, Pageable pageable) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Usuario currentUser = (Usuario) auth.getPrincipal();
         String role = currentUser.getRole();
 
-        List<ServiceOrder> orders;
+        Page<ServiceOrder> ordersPage;
 
-        // TECNICO vê apenas as OS atribuídas a ele
+        // Filtra por técnico se necessário, senão busca todas com filtros
         if ("TECNICO".equals(role)) {
-            if (statusFilter != null && !statusFilter.isBlank()) {
-                orders = serviceOrderRepository.findByTechnicianIdAndStatus(currentUser.getId(), statusFilter);
-            } else {
-                orders = serviceOrderRepository.findByTechnicianId(currentUser.getId());
-            }
+            ordersPage = serviceOrderRepository.findWithFiltersTechnician(currentUser.getId(), search, status, month, year, pageable);
         } else {
-            // PROPRIETARIO e FINANCEIRO veem todas
-            if (statusFilter != null && !statusFilter.isBlank()) {
-                orders = serviceOrderRepository.findByStatus(statusFilter);
-            } else {
-                orders = serviceOrderRepository.findAll();
-            }
+            ordersPage = serviceOrderRepository.findWithFilters(search, status, month, year, pageable);
         }
 
-        return orders.stream()
-                .map(order -> mapToDTO(order, role))
-                .collect(Collectors.toList());
+        return ordersPage.map(order -> mapToDTO(order, role));
     }
 
     @Transactional(readOnly = true)
@@ -90,14 +81,13 @@ public class ServiceOrderService {
         Double travelCost = dto.getTravelCost() != null ? dto.getTravelCost() : 0.0;
 
         // Cálculo automático do pagamento do técnico (10% do valor do serviço)
-        Double technicianPayment = serviceValue * 0.10;
 
         ServiceOrder order = ServiceOrder.builder()
                 .client(client)
                 .machine(machine)
                 .technician(technician)
                 .status("ABERTA")
-                .priority(dto.getPriority() != null ? dto.getPriority() : "NORMAL")
+                .serviceDate(dto.getServiceDate())
                 .problemDescription(dto.getProblemDescription())
                 .serviceDescription(dto.getServiceDescription())
                 .observations(dto.getObservations())
@@ -105,8 +95,6 @@ public class ServiceOrderService {
                 .serviceValue(serviceValue)
                 .partsValue(0.0)
                 .travelCost(travelCost)
-                .totalValue(serviceValue + travelCost)
-                .technicianPayment(technicianPayment)
                 .technicianPaymentStatus("A_RECEBER")
                 .build();
 
@@ -131,20 +119,18 @@ public class ServiceOrderService {
         if (dto.getTravelCost() != null) {
             order.setTravelCost(dto.getTravelCost());
         }
-        if (dto.getPriority() != null) {
-            order.setPriority(dto.getPriority());
+        if (dto.getServiceDate() != null) {
+            order.setServiceDate(dto.getServiceDate());
         }
         if (dto.getServiceType() != null) {
             order.setServiceType(dto.getServiceType());
         }
         if (dto.getServiceValue() != null) {
             order.setServiceValue(dto.getServiceValue());
-            // Recalcula pagamento do técnico (10%)
-            order.setTechnicianPayment(dto.getServiceValue() * 0.10);
         }
 
-        // Recalcula o total
-        recalculateTotal(order);
+        // Atualiza o valor das peças (cacheado na entidade)
+        refreshPartsValue(order);
 
         order = serviceOrderRepository.save(order);
         return mapToDTO(order, "PROPRIETARIO");
@@ -190,12 +176,25 @@ public class ServiceOrderService {
         return mapToDTO(order, "PROPRIETARIO");
     }
 
-    // Recalcula o valor total considerando peças
-    public void recalculateTotal(ServiceOrder order) {
+    // Atualiza o cache de partsValue na entidade
+    public void refreshPartsValue(ServiceOrder order) {
         Double partsTotal = servicePartRepository.sumTotalPartsByServiceOrderId(order.getId());
-        order.setPartsValue(partsTotal);
-        order.setTotalValue(order.getServiceValue() + partsTotal + order.getTravelCost());
+        order.setPartsValue(partsTotal != null ? partsTotal : 0.0);
         serviceOrderRepository.save(order);
+    }
+
+    // Cálculos Dinâmicos (Não persistidos)
+    public Double calculateTotal(ServiceOrder order) {
+        return (order.getServiceValue() != null ? order.getServiceValue() : 0.0) +
+               (order.getPartsValue() != null ? order.getPartsValue() : 0.0) +
+               (order.getTravelCost() != null ? order.getTravelCost() : 0.0);
+    }
+
+    public Double calculateTechnicianPayment(ServiceOrder order) {
+        // Base: Mão de Obra + Deslocamento
+        Double base = (order.getServiceValue() != null ? order.getServiceValue() : 0.0) +
+                      (order.getTravelCost() != null ? order.getTravelCost() : 0.0);
+        return base * 0.10;
     }
 
     // Gera sugestões automáticas baseadas na máquina selecionada
@@ -245,6 +244,7 @@ public class ServiceOrderService {
                 .machineDescription(machine.getDescription())
                 .suggestedParts(suggestedParts)
                 .autoObservation(autoObs)
+                .estimatedTechnicianPayment(estimatedValue * 0.10)
                 .build();
     }
 
@@ -252,16 +252,16 @@ public class ServiceOrderService {
     private ServiceOrderResponseDTO mapToDTO(ServiceOrder order, String role) {
         ServiceOrderResponseDTO.ServiceOrderResponseDTOBuilder builder = ServiceOrderResponseDTO.builder()
                 .id(order.getId())
-                .clientId(order.getClient().getId())
-                .clientName(order.getClient().getCompanyName())
-                .clientAddress(order.getClient().getAddress())
-                .machineId(order.getMachine().getId())
-                .machineName(order.getMachine().getModel())
-                .machineType(order.getMachine().getMachineType())
-                .technicianId(order.getTechnician().getId())
-                .technicianName(order.getTechnician().getNome())
+                .clientId(order.getClient() != null ? order.getClient().getId() : null)
+                .clientName(order.getClient() != null ? order.getClient().getCompanyName() : "N/A")
+                .clientAddress(order.getClient() != null ? order.getClient().getAddress() : null)
+                .machineId(order.getMachine() != null ? order.getMachine().getId() : null)
+                .machineName(order.getMachine() != null ? order.getMachine().getModel() : "N/A")
+                .machineType(order.getMachine() != null ? order.getMachine().getMachineType() : null)
+                .technicianId(order.getTechnician() != null ? order.getTechnician().getId() : null)
+                .technicianName(order.getTechnician() != null ? order.getTechnician().getNome() : "Não Atribuído")
                 .status(order.getStatus())
-                .priority(order.getPriority())
+                .serviceDate(order.getServiceDate())
                 .problemDescription(order.getProblemDescription())
                 .serviceDescription(order.getServiceDescription())
                 .observations(order.getObservations())
@@ -270,17 +270,22 @@ public class ServiceOrderService {
                 .openedAt(order.getOpenedAt())
                 .closedAt(order.getClosedAt());
 
+        // Calcula valores dinamicamente
+        Double totalValue = calculateTotal(order);
+        Double techPayment = calculateTechnicianPayment(order);
+
         // TECNICO não vê valores financeiros totais, apenas o pagamento dele
         if ("TECNICO".equals(role)) {
-            builder.technicianPayment(order.getTechnicianPayment());
+            builder.technicianPayment(techPayment);
             // Demais valores ficam null (não expostos)
         } else {
             // PROPRIETARIO e FINANCEIRO veem tudo
             builder.serviceValue(order.getServiceValue())
                     .partsValue(order.getPartsValue())
                     .travelCost(order.getTravelCost())
-                    .totalValue(order.getTotalValue())
-                    .technicianPayment(order.getTechnicianPayment());
+                    .totalValue(totalValue)
+                    .technicianPayment(techPayment)
+                    .netProfit(totalValue - techPayment);
         }
 
         return builder.build();

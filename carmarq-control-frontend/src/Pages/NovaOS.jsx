@@ -27,12 +27,15 @@ export default function NovaOS() {
         maquinaId: '',
         tecnicoId: '',
         descricaoProblema: '',
-        prioridade: 'NORMAL',
         observacoes: '',
         custoDeslocamento: '',
         tipoServico: '',
-        valorServico: ''
+        valorServico: '',
+        serviceDate: ''
     })
+
+    const clienteSelecionado = listaClientes.find(c => c.id === parseInt(formData.clienteId))
+
 
     // Carrega dados iniciais em paralelo
     useEffect(() => {
@@ -93,7 +96,7 @@ export default function NovaOS() {
             machineId: parseInt(formData.maquinaId),
             technicianId: parseInt(formData.tecnicoId),
             problemDescription: formData.descricaoProblema,
-            priority: formData.prioridade,
+            serviceDate: formData.serviceDate,
             observations: formData.observacoes,
             travelCost: formData.custoDeslocamento ? parseFloat(formData.custoDeslocamento) : null,
             serviceType: formData.tipoServico,
@@ -115,12 +118,13 @@ export default function NovaOS() {
         }
     }
 
-    // Calcula totais em tempo real usando valor manual
-    const clienteSelecionado = listaClientes.find(c => c.id === parseInt(formData.clienteId))
+    // Cálculos puramente Visuais (Baseados no que o usuário digita ou no que o backend sugere)
     const serviceValue = formData.valorServico ? parseFloat(formData.valorServico) : 0
     const travelCost = formData.custoDeslocamento ? parseFloat(formData.custoDeslocamento) : 0
     const totalEstimado = serviceValue + travelCost
-    const technicianPayment = serviceValue * 0.10
+    
+    // O pagamento do técnico agora é sugerido pelo backend ou calculado como exibição, mas o processamento real é no servidor
+    const technicianPayment = suggestions?.estimatedTechnicianPayment || (totalEstimado * 0.10)
 
     return (
         <div className="dashboard-layout">
@@ -217,19 +221,16 @@ export default function NovaOS() {
                                     {formErrors.technicianId && <span className="error-message">{formErrors.technicianId}</span>}
                                 </div>
 
-                                {/* Prioridade */}
+                                {/* Data do Atendimento */}
                                 <div className="form-group">
-                                    <label>Prioridade</label>
-                                    <select
-                                        className="form-input"
-                                        value={formData.prioridade}
-                                        onChange={e => setFormData({ ...formData, prioridade: e.target.value })}
-                                    >
-                                        <option value="BAIXA">🟢 Baixa</option>
-                                        <option value="NORMAL">🔵 Normal</option>
-                                        <option value="ALTA">🟠 Alta</option>
-                                        <option value="URGENTE">🔴 Urgente</option>
-                                    </select>
+                                    <label>Data do Atendimento *</label>
+                                    <input
+                                        type="date"
+                                        className={`form-input ${formErrors.serviceDate ? 'input-error' : ''}`}
+                                        value={formData.serviceDate}
+                                        onChange={e => setFormData({ ...formData, serviceDate: e.target.value })}
+                                    />
+                                    {formErrors.serviceDate && <span className="error-message">{formErrors.serviceDate}</span>}
                                 </div>
 
                                 {/* Custo de deslocamento */}
@@ -336,13 +337,18 @@ export default function NovaOS() {
                                             <span>Deslocamento</span>
                                             <span className="value">R$ {travelCost.toFixed(2)}</span>
                                         </div>
-                                        <div className="finance-line">
-                                            <span>Pgto Técnico (10%)</span>
-                                            <span className="value">R$ {technicianPayment.toFixed(2)}</span>
+                                        <div className="finance-line" style={{ color: '#ef4444' }}>
+                                            <span>Pgto Técnico (Despesa 10%)</span>
+                                            <span className="value">- R$ {technicianPayment.toFixed(2)}</span>
                                         </div>
                                         <div className="finance-line total-line">
-                                            <span>Total Estimado</span>
-                                            <span className="value">R$ {totalEstimado.toFixed(2)}</span>
+                                            <span>Total Líquido Estimado</span>
+                                            <span className="value" style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>
+                                                R$ {(totalEstimado - technicianPayment).toFixed(2)}
+                                            </span>
+                                        </div>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'right', marginTop: '0.5rem' }}>
+                                            Total Cobrado: R$ {totalEstimado.toFixed(2)}
                                         </div>
                                     </div>
 

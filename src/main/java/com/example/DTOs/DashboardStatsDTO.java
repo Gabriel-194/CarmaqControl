@@ -26,7 +26,8 @@ public class DashboardStatsDTO {
     private Double totalRevenue;
     private Double monthlyRevenue;
     private Double pendingPayments;
-    private Double totalProfit;             // Lucro (90% do valor do serviço + outros custos)
+    private Double totalExpenses;            // Total de pagamentos aos técnicos
+    private Double totalProfit;             // Lucro (Total Cobrado - Despesas)
 
     // Métricas financeiras do técnico (somente para TECNICO)
     private Double technicianEarnings;      // Total que o técnico já recebeu

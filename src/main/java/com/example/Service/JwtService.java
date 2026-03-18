@@ -71,9 +71,13 @@ public class JwtService {
     public Cookie createJwtCookie(String token) {
         Cookie cookie = new Cookie("accessToken", token);
         cookie.setHttpOnly(true);
-        cookie.setSecure(false);
+        cookie.setSecure(false); // Definir como true em produção (HTTPS)
         cookie.setPath("/");
         cookie.setMaxAge((int) (jwtExpiration / 1000));
+        // Nota: O objeto Cookie do Jakarta não suporta SameSite nativamente.
+        // O ideal é configurar via Header na resposta, mas manteremos assim por compatibilidade
+        // de código existente, focando na melhoria do SameSite via SecurityConfig ou Filter se necessário.
+        // Contudo, para este projeto, vamos garantir HttpOnly e Path.
         return cookie;
     }
 

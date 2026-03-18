@@ -26,6 +26,9 @@ public class ServiceOrderSuggestionDTO {
     // Valor hora técnica
     private Double hourlyRate;
 
+    // Estimativa de ganho do técnico (Ex: 10% do total sugerido)
+    private Double estimatedTechnicianPayment;
+
     // Informações da máquina
     private String machineType;
     private String machineModel;

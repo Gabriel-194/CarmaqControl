@@ -23,7 +23,7 @@ public class MachineController {
     @GetMapping
     @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO', 'TECNICO')")
     public ResponseEntity<List<MachineResponseDTO>> getAllMachines(
-            @RequestParam(required = false, defaultValue = "false") Boolean includeInactive) {
+            @RequestParam(name = "includeInactive", required = false, defaultValue = "false") Boolean includeInactive) {
         return ResponseEntity.ok(machineService.getAllMachines(includeInactive));
     }
 

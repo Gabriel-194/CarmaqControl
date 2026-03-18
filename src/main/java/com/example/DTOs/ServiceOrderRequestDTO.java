@@ -9,6 +9,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+
 // DTO de requisição para criar Ordem de Serviço
 @Data
 @Builder
@@ -25,9 +27,8 @@ public class ServiceOrderRequestDTO {
     @NotNull(message = "ID do técnico responsável é obrigatório")
     private Long technicianId;
 
-    @NotBlank(message = "Prioridade é obrigatória")
-    @Size(max = 20)
-    private String priority;
+    @NotNull(message = "Data do atendimento é obrigatória")
+    private LocalDate serviceDate;
 
     @Size(max = 2000, message = "Descrição do problema não pode exceder 2000 caracteres")
     private String problemDescription;

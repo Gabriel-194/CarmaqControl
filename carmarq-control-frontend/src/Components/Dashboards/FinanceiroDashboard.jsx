@@ -9,20 +9,26 @@ const API_URL = 'http://localhost:8080/api/dashboard/stats'
 export function FinanceiroDashboard() {
     const [stats, setStats] = useState(null)
     const [loading, setLoading] = useState(true)
+    const [month, setMonth] = useState('') // "Todos os meses" por padrão
+    const [year, setYear] = useState(new Date().getFullYear())
+
+    const fetchStats = async () => {
+        try {
+            setLoading(true)
+            let url = `${API_URL}?year=${year}`
+            if (month) url += `&month=${month}`
+            const res = await axios.get(url, { withCredentials: true })
+            setStats(res.data)
+        } catch (error) {
+            console.error('Erro ao carregar métricas', error)
+        } finally {
+            setLoading(false)
+        }
+    }
 
     useEffect(() => {
-        const fetchStats = async () => {
-            try {
-                const res = await axios.get(API_URL, { withCredentials: true })
-                setStats(res.data)
-            } catch (error) {
-                console.error('Erro ao carregar métricas', error)
-            } finally {
-                setLoading(false)
-            }
-        }
         fetchStats()
-    }, [])
+    }, [month, year])
 
     if (loading) return <div style={{ textAlign: 'center', padding: '3rem' }}><Loader2 className="animate-spin" size={32} /></div>
     if (!stats) return <div style={{ padding: '2rem' }}>Erro ao carregar dados.</div>
@@ -42,7 +48,43 @@ export function FinanceiroDashboard() {
 
     return (
         <div>
-            <h1 className="page-title" style={{ marginBottom: '1.5rem' }}>Financeiro Carmarq</h1>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <h1 className="page-title" style={{ margin: 0 }}>Financeiro Carmarq</h1>
+                
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <select 
+                        value={month} 
+                        onChange={(e) => setMonth(e.target.value === '' ? '' : parseInt(e.target.value))}
+                        className="filter-select"
+                        style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid #ddd' }}
+                    >
+                        <option value="">Todos os meses</option>
+                        <option value={1}>Janeiro</option>
+                        <option value={2}>Fevereiro</option>
+                        <option value={3}>Março</option>
+                        <option value={4}>Abril</option>
+                        <option value={5}>Maio</option>
+                        <option value={6}>Junho</option>
+                        <option value={7}>Julho</option>
+                        <option value={8}>Agosto</option>
+                        <option value={9}>Setembro</option>
+                        <option value={10}>Outubro</option>
+                        <option value={11}>Novembro</option>
+                        <option value={12}>Dezembro</option>
+                    </select>
+
+                    <select 
+                        value={year} 
+                        onChange={(e) => setYear(parseInt(e.target.value))}
+                        className="filter-select"
+                        style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid #ddd' }}
+                    >
+                        {[2024, 2025, 2026, 2027, 2028].map(y => (
+                            <option key={y} value={y}>{y}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
 
             <div className="dashboard-grid">
                 <div className="stat-card">
@@ -50,17 +92,26 @@ export function FinanceiroDashboard() {
                         <span className="stat-title">Receita Total</span>
                         <DollarSign className="stat-icon" size={20} color="#10b981" />
                     </div>
-                    <span className="stat-value">{formatCurrency(stats.totalRevenue)}</span>
-                    <span className="stat-desc">{formatCurrency(stats.monthlyRevenue)} este mês</span>
+                    <span className="stat-value" style={{ color: '#10b981' }}>{formatCurrency(stats.totalRevenue)}</span>
+                    <span className="stat-desc">Bruto de serviços concluídos</span>
                 </div>
 
-                <div className="stat-card">
+                <div className="stat-card" style={{ borderLeft: '4px solid #ef4444' }}>
                     <div className="stat-header">
-                        <span className="stat-title">OS Concluídas</span>
-                        <ClipboardList className="stat-icon" size={20} color="#10b981" />
+                        <span className="stat-title">Despesas (Técnicos)</span>
+                        <DollarSign className="stat-icon" size={20} color="#ef4444" style={{ transform: 'rotate(180deg)' }} />
                     </div>
-                    <span className="stat-value">{stats.completedOrders || 0}</span>
-                    <span className="stat-desc">Serviços finalizados</span>
+                    <span className="stat-value" style={{ color: '#ef4444' }}>- {formatCurrency(stats.totalExpenses)}</span>
+                    <span className="stat-desc">Repasses aos técnicos</span>
+                </div>
+
+                <div className="stat-card" style={{ borderLeft: '4px solid #10b981' }}>
+                    <div className="stat-header">
+                        <span className="stat-title">Lucro Líquido</span>
+                        <DollarSign className="stat-icon" size={20} color="#059669" />
+                    </div>
+                    <span className="stat-value" style={{ color: '#059669' }}>{formatCurrency(stats.totalProfit)}</span>
+                    <span className="stat-desc">Receita líquida da empresa</span>
                 </div>
 
                 <div className="stat-card">

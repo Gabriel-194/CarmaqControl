@@ -28,7 +28,7 @@ public class UserController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('PROPRIETARIO')")
-    public ResponseEntity<UserResponseDTO> getUserById(@PathVariable Long id) {
+    public ResponseEntity<UserResponseDTO> getUserById(@PathVariable(name = "id") Long id) {
         try {
             return ResponseEntity.ok(usuarioService.findById(id));
         } catch (RuntimeException e) {
@@ -51,7 +51,7 @@ public class UserController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('PROPRIETARIO')")
-    public ResponseEntity<UserResponseDTO> updateUser(@PathVariable Long id, @RequestBody UserUpdateDTO dto) {
+    public ResponseEntity<UserResponseDTO> updateUser(@PathVariable(name = "id") Long id, @RequestBody UserUpdateDTO dto) {
         try {
             UserResponseDTO updated = usuarioService.updateUsuario(id, dto);
             return ResponseEntity.ok(updated);
@@ -62,7 +62,7 @@ public class UserController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('PROPRIETARIO')")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteUser(@PathVariable(name = "id") Long id) {
         try {
             usuarioService.deleteUsuario(id);
             return ResponseEntity.noContent().build();
@@ -72,7 +72,8 @@ public class UserController {
     }
 
     @PutMapping("/{id}/restore")
-    public ResponseEntity<Void> restoreUser(@PathVariable Long id) {
+    @PreAuthorize("hasAuthority('PROPRIETARIO')")
+    public ResponseEntity<Void> restoreUser(@PathVariable(name = "id") Long id) {
         try {
             usuarioService.restoreUsuario(id);
             return ResponseEntity.ok().build();

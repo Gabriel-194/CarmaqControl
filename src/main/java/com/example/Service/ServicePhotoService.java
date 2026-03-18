@@ -2,10 +2,14 @@ package com.example.Service;
 
 import com.example.Models.ServiceOrder;
 import com.example.Models.ServicePhoto;
+import com.example.Models.Usuario;
 import com.example.Repository.ServiceOrderRepository;
 import com.example.Repository.ServicePhotoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -36,11 +40,13 @@ public class ServicePhotoService {
 
     @Transactional(readOnly = true)
     public List<ServicePhoto> getPhotosByServiceOrderId(Long serviceOrderId) {
+        validateOsOwnership(serviceOrderId);
         return servicePhotoRepository.findByServiceOrderId(serviceOrderId);
     }
 
     @Transactional
     public ServicePhoto uploadPhoto(Long serviceOrderId, MultipartFile file) throws IOException {
+        validateOsOwnership(serviceOrderId);
         // Valida o tipo do arquivo
         if (file.getContentType() == null || !ALLOWED_TYPES.contains(file.getContentType())) {
             throw new RuntimeException("Tipo de arquivo não permitido. Envie imagens (JPEG, PNG, GIF, WebP).");
@@ -83,6 +89,8 @@ public class ServicePhotoService {
     public void deletePhoto(Long photoId) throws IOException {
         ServicePhoto photo = servicePhotoRepository.findById(photoId)
                 .orElseThrow(() -> new RuntimeException("Foto não encontrada com id " + photoId));
+        
+        validateOsOwnership(photo.getServiceOrder().getId());
 
         // Remove o arquivo do disco
         Path filePath = Paths.get(photo.getFilePath());
@@ -95,6 +103,26 @@ public class ServicePhotoService {
     public Path getPhotoPath(Long photoId) {
         ServicePhoto photo = servicePhotoRepository.findById(photoId)
                 .orElseThrow(() -> new RuntimeException("Foto não encontrada com id " + photoId));
+        
+        validateOsOwnership(photo.getServiceOrder().getId());
         return Paths.get(photo.getFilePath());
+    }
+
+    private void validateOsOwnership(Long serviceOrderId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof Usuario)) {
+            throw new AccessDeniedException("Usuário não autenticado");
+        }
+        
+        Usuario user = (Usuario) auth.getPrincipal();
+        
+        if ("TECNICO".equals(user.getRole())) {
+            ServiceOrder order = serviceOrderRepository.findById(serviceOrderId)
+                    .orElseThrow(() -> new RuntimeException("Ordem de serviço não encontrada"));
+            
+            if (order.getTechnician() == null || !order.getTechnician().getId().equals(user.getId())) {
+                throw new AccessDeniedException("Você não tem permissão para acessar fotos desta Ordem de Serviço");
+            }
+        }
     }
 }

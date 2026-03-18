@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 // Entidade JPA para Ordens de Serviço (OS)
@@ -14,7 +15,12 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "service_orders")
+@Table(name = "service_orders", indexes = {
+    @Index(name = "idx_so_status", columnList = "status"),
+    @Index(name = "idx_so_technician", columnList = "technician_id"),
+    @Index(name = "idx_so_client", columnList = "client_id"),
+    @Index(name = "idx_so_closed_at", columnList = "closed_at")
+})
 public class ServiceOrder {
 
     @Id
@@ -40,9 +46,9 @@ public class ServiceOrder {
     @Column(nullable = false, length = 30)
     private String status;
 
-    // Prioridade: BAIXA, NORMAL, ALTA, URGENTE
-    @Column(nullable = false, length = 20)
-    private String priority;
+    // Data programada para o atendimento
+    @Column(name = "service_date")
+    private LocalDate serviceDate;
 
     // Descrição do problema relatado
     @Column(name = "problem_description", length = 2000)
@@ -75,15 +81,9 @@ public class ServiceOrder {
     @Column(name = "travel_cost")
     private Double travelCost = 0.0;
 
-    // Valor total da OS (serviço + peças + deslocamento)
-    @Builder.Default
-    @Column(name = "total_value")
-    private Double totalValue = 0.0;
-
-    // Valor que será pago/transferido ao técnico (calculado automaticamente: 10% do serviceValue)
-    @Builder.Default
-    @Column(name = "technician_payment")
-    private Double technicianPayment = 0.0;
+    // Valor que será pago/transferido ao técnico (calculado automaticamente: 10% de serviceValue + travelCost)
+    // O total faturado (totalValue) também é calculado dinamicamente: serviceValue + travelCost + partsValue
+    // Estes campos não são mais persistidos diretamente no banco para garantir dinamismo.
 
     // Status do pagamento do técnico: A_RECEBER ou RECEBIDO
     @Builder.Default

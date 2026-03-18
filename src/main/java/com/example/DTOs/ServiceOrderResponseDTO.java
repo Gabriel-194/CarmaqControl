@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 // DTO de resposta para Ordem de Serviço — campos financeiros são filtrados por role no Service
@@ -30,9 +31,9 @@ public class ServiceOrderResponseDTO {
     private Long technicianId;
     private String technicianName;
 
-    // Status e prioridade
+    // Status e data de atendimento
     private String status;
-    private String priority;
+    private LocalDate serviceDate;
 
     // Descrições
     private String problemDescription;
@@ -53,6 +54,9 @@ public class ServiceOrderResponseDTO {
 
     // Status do pagamento do técnico: A_RECEBER ou RECEBIDO
     private String technicianPaymentStatus;
+
+    // Lucro Líquido (Total - Pagamento Técnico)
+    private Double netProfit;
 
     // Datas
     private LocalDateTime openedAt;

@@ -28,7 +28,7 @@ public class ServicePhotoController {
 
     @GetMapping
     @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO', 'TECNICO')")
-    public ResponseEntity<List<Map<String, Object>>> getPhotos(@PathVariable Long serviceOrderId) {
+    public ResponseEntity<List<Map<String, Object>>> getPhotos(@PathVariable(name = "serviceOrderId") Long serviceOrderId) {
         List<ServicePhoto> photos = servicePhotoService.getPhotosByServiceOrderId(serviceOrderId);
         // Retorna apenas metadados (sem o caminho do arquivo no servidor)
         List<Map<String, Object>> response = photos.stream()
@@ -44,8 +44,8 @@ public class ServicePhotoController {
     @PostMapping
     @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'TECNICO')")
     public ResponseEntity<Map<String, Object>> uploadPhoto(
-            @PathVariable Long serviceOrderId,
-            @RequestParam("file") MultipartFile file) throws IOException {
+            @PathVariable(name = "serviceOrderId") Long serviceOrderId,
+            @RequestParam(name = "file") MultipartFile file) throws IOException {
         ServicePhoto photo = servicePhotoService.uploadPhoto(serviceOrderId, file);
         Map<String, Object> response = Map.of(
                 "id", photo.getId(),
@@ -59,7 +59,7 @@ public class ServicePhotoController {
     @GetMapping("/{photoId}/view")
     @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO', 'TECNICO')")
     public ResponseEntity<Resource> viewPhoto(
-            @PathVariable Long serviceOrderId, @PathVariable Long photoId) throws IOException {
+            @PathVariable(name = "serviceOrderId") Long serviceOrderId, @PathVariable(name = "photoId") Long photoId) throws IOException {
         Path filePath = servicePhotoService.getPhotoPath(photoId);
         Resource resource = new UrlResource(filePath.toUri());
 
@@ -75,7 +75,7 @@ public class ServicePhotoController {
     @DeleteMapping("/{photoId}")
     @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'TECNICO')")
     public ResponseEntity<Void> deletePhoto(
-            @PathVariable Long serviceOrderId, @PathVariable Long photoId) throws IOException {
+            @PathVariable(name = "serviceOrderId") Long serviceOrderId, @PathVariable(name = "photoId") Long photoId) throws IOException {
         servicePhotoService.deletePhoto(photoId);
         return ResponseEntity.noContent().build();
     }

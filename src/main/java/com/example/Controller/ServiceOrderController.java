@@ -11,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 // Controller principal para Ordens de Serviço
@@ -25,20 +24,35 @@ public class ServiceOrderController {
     // Endpoint de sugestões automáticas — retorna dados calculados quando uma máquina é selecionada
     @GetMapping("/suggestions")
     @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'TECNICO')")
-    public ResponseEntity<ServiceOrderSuggestionDTO> getSuggestions(@RequestParam Long machineId) {
+    public ResponseEntity<ServiceOrderSuggestionDTO> getSuggestions(@RequestParam(name = "machineId") Long machineId) {
         return ResponseEntity.ok(serviceOrderService.generateSuggestions(machineId));
     }
 
     @GetMapping
     @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO', 'TECNICO')")
-    public ResponseEntity<List<ServiceOrderResponseDTO>> getAllServiceOrders(
-            @RequestParam(required = false) String status) {
-        return ResponseEntity.ok(serviceOrderService.getAllServiceOrders(status));
+    public ResponseEntity<org.springframework.data.domain.Page<ServiceOrderResponseDTO>> getAllServiceOrders(
+            @RequestParam(name = "search", required = false) String search,
+            @RequestParam(name = "status", required = false) String status,
+            @RequestParam(name = "month", required = false) Integer month,
+            @RequestParam(name = "year", required = false) Integer year,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "10") int size,
+            @RequestParam(name = "sort", defaultValue = "createdAt,desc") String sort) {
+        
+        String[] sortParts = sort.split(",");
+        org.springframework.data.domain.Sort sortOrder = org.springframework.data.domain.Sort.by(
+                sortParts.length > 1 && "asc".equalsIgnoreCase(sortParts[1]) ? 
+                org.springframework.data.domain.Sort.Direction.ASC : 
+                org.springframework.data.domain.Sort.Direction.DESC, 
+                sortParts[0]);
+                
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, sortOrder);
+        return ResponseEntity.ok(serviceOrderService.getAllServiceOrders(search, status, month, year, pageable));
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO', 'TECNICO')")
-    public ResponseEntity<ServiceOrderResponseDTO> getServiceOrderById(@PathVariable Long id) {
+    public ResponseEntity<ServiceOrderResponseDTO> getServiceOrderById(@PathVariable(name = "id") Long id) {
         return ResponseEntity.ok(serviceOrderService.getServiceOrderById(id));
     }
 
@@ -52,7 +66,7 @@ public class ServiceOrderController {
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('PROPRIETARIO')")
     public ResponseEntity<ServiceOrderResponseDTO> updateServiceOrder(
-            @PathVariable Long id, @Valid @RequestBody ServiceOrderRequestDTO dto) {
+            @PathVariable(name = "id") Long id, @Valid @RequestBody ServiceOrderRequestDTO dto) {
         return ResponseEntity.ok(serviceOrderService.updateServiceOrder(id, dto));
     }
 
@@ -60,7 +74,7 @@ public class ServiceOrderController {
     @PutMapping("/{id}/status")
     @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'TECNICO')")
     public ResponseEntity<ServiceOrderResponseDTO> updateStatus(
-            @PathVariable Long id, @RequestBody Map<String, String> body) {
+            @PathVariable(name = "id") Long id, @RequestBody Map<String, String> body) {
         String newStatus = body.get("status");
         return ResponseEntity.ok(serviceOrderService.updateStatus(id, newStatus));
     }
@@ -68,7 +82,7 @@ public class ServiceOrderController {
     // Endpoint para técnico marcar pagamento como recebido (ação irreversível)
     @PutMapping("/{id}/mark-received")
     @PreAuthorize("hasAuthority('TECNICO')")
-    public ResponseEntity<ServiceOrderResponseDTO> markAsReceived(@PathVariable Long id) {
+    public ResponseEntity<ServiceOrderResponseDTO> markAsReceived(@PathVariable(name = "id") Long id) {
         return ResponseEntity.ok(serviceOrderService.markAsReceived(id));
     }
 }

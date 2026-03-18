@@ -6,7 +6,7 @@ import ListaPecas from '../Components/ListaPecas'
 import ServicePhotos from '../Components/ServicePhotos'
 import { useAuth } from '../contexts/AuthContext'
 import { toast } from '../Components/ui/Toaster'
-import { ArrowLeft, CheckCircle, Clock, PenTool, Camera, Loader2, AlertTriangle, Play, DollarSign } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Clock, PenTool, Camera, Loader2, AlertTriangle, Play, DollarSign, Lock } from 'lucide-react'
 import axios from 'axios'
 import '../Styles/OrdemDetalhes.css'
 
@@ -125,8 +125,8 @@ export default function OrdemDetalhes() {
                                 <p>{osData.technicianName}</p>
                             </div>
                             <div className="detail-row">
-                                <strong>Prioridade:</strong>
-                                <p>{osData.priority}</p>
+                                <strong>Data do Atendimento:</strong>
+                                <p>{osData.serviceDate ? new Date(osData.serviceDate).toLocaleDateString('pt-BR') : 'Não informada'}</p>
                             </div>
                             {osData.serviceType && (
                                 <div className="detail-row">
@@ -144,16 +144,39 @@ export default function OrdemDetalhes() {
 
                         {/* Descrição do Serviço Realizado — campo editável pelo técnico */}
                         <div className="card info-card" style={{ marginTop: '1rem' }}>
-                            <h3 style={{ marginBottom: '0.75rem' }}>Descrição do Serviço Realizado</h3>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                                <h3 style={{ margin: 0 }}>Descrição do Serviço Realizado</h3>
+                                {osData.status !== 'EM_ANDAMENTO' && (
+                                    <span style={{ fontSize: '0.8rem', color: '#92400e', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                        <Lock size={14} /> Somente em andamento
+                                    </span>
+                                )}
+                            </div>
                             <textarea
                                 className="form-input"
                                 rows="3"
                                 placeholder="Descreva o serviço realizado..."
                                 value={serviceDescription}
                                 onChange={e => setServiceDescription(e.target.value)}
-                                style={{ width: '100%', marginBottom: '0.5rem' }}
+                                disabled={osData.status !== 'EM_ANDAMENTO'}
+                                style={{ 
+                                    width: '100%', 
+                                    marginBottom: '0.5rem',
+                                    backgroundColor: osData.status !== 'EM_ANDAMENTO' ? '#f9fafb' : 'white',
+                                    cursor: osData.status !== 'EM_ANDAMENTO' ? 'not-allowed' : 'text'
+                                }}
                             />
-                            <button className="btn-primary" onClick={handleSaveDescription} style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}>
+                            <button 
+                                className="btn-primary" 
+                                onClick={handleSaveDescription} 
+                                disabled={osData.status !== 'EM_ANDAMENTO'}
+                                style={{ 
+                                    fontSize: '0.85rem', 
+                                    padding: '0.5rem 1rem',
+                                    opacity: osData.status !== 'EM_ANDAMENTO' ? 0.6 : 1,
+                                    cursor: osData.status !== 'EM_ANDAMENTO' ? 'not-allowed' : 'pointer'
+                                }}
+                            >
                                 Salvar Descrição
                             </button>
                         </div>
@@ -238,21 +261,24 @@ export default function OrdemDetalhes() {
                                         <span>R$ {(osData.serviceValue || 0).toFixed(2)}</span>
                                     </div>
                                     <div className="finance-row">
-                                        <span>Peças</span>
-                                        <span>R$ {(osData.partsValue || 0).toFixed(2)}</span>
-                                    </div>
-                                    <div className="finance-row">
                                         <span>Deslocamento</span>
                                         <span>R$ {(osData.travelCost || 0).toFixed(2)}</span>
                                     </div>
                                     <div className="finance-row">
-                                        <span>Pgto Técnico (10%)</span>
-                                        <span>R$ {(osData.technicianPayment || 0).toFixed(2)}</span>
+                                        <span>Peças</span>
+                                        <span>R$ {(osData.partsValue || 0).toFixed(2)}</span>
+                                    </div>
+                                    <div className="finance-row" style={{ color: '#ef4444' }}>
+                                        <span>Pgto Técnico (Despesa)</span>
+                                        <span>- R$ {(osData.technicianPayment || 0).toFixed(2)}</span>
                                     </div>
                                     <div className="finance-divider"></div>
                                     <div className="finance-total">
-                                        <span>Total</span>
-                                        <span>R$ {(osData.totalValue || 0).toFixed(2)}</span>
+                                        <span>Total Cobrado</span>
+                                        <span style={{ color: '#10b981' }}>R$ {(osData.totalValue || 0).toFixed(2)}</span>
+                                    </div>
+                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'right', marginTop: '0.25rem' }}>
+                                        Lucro Líquido: R$ {(osData.netProfit || 0).toFixed(2)}
                                     </div>
                                 </>
                             ) : (

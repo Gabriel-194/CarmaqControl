@@ -3,8 +3,11 @@ package com.example.Service;
 import com.example.DTOs.ClientRequestDTO;
 import com.example.DTOs.ClientResponseDTO;
 import com.example.Models.Client;
+import com.example.Models.Usuario;
 import com.example.Repository.ClientRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,12 +22,22 @@ public class ClientService {
 
     @Transactional(readOnly = true)
     public List<ClientResponseDTO> getAllClients(Boolean includeInactive) {
-        if (Boolean.TRUE.equals(includeInactive)) {
-            return clientRepository.findAll().stream()
-                    .map(this::mapToDTO)
-                    .collect(Collectors.toList());
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario currentUser = (Usuario) auth.getPrincipal();
+        String role = currentUser.getRole();
+
+        List<Client> clients;
+
+        if ("TECNICO".equals(role)) {
+            // Técnicos veem apenas clientes de suas OSs
+            clients = clientRepository.findAllByTechnicianId(currentUser.getId());
+        } else if (Boolean.TRUE.equals(includeInactive)) {
+            clients = clientRepository.findAll();
+        } else {
+            clients = clientRepository.findAllByActiveTrue();
         }
-        return clientRepository.findAllByActiveTrue().stream()
+
+        return clients.stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }

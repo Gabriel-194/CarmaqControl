@@ -9,20 +9,26 @@ const API_URL = 'http://localhost:8080/api/dashboard/stats'
 export function ProprietarioDashboard() {
     const [stats, setStats] = useState(null)
     const [loading, setLoading] = useState(true)
+    const [month, setMonth] = useState('') // "Todos os meses" por padrão
+    const [year, setYear] = useState(new Date().getFullYear())
+
+    const fetchStats = async () => {
+        try {
+            setLoading(true)
+            let url = `${API_URL}?year=${year}`
+            if (month) url += `&month=${month}`
+            const res = await axios.get(url, { withCredentials: true })
+            setStats(res.data)
+        } catch (error) {
+            console.error('Erro ao carregar métricas', error)
+        } finally {
+            setLoading(false)
+        }
+    }
 
     useEffect(() => {
-        const fetchStats = async () => {
-            try {
-                const res = await axios.get(API_URL, { withCredentials: true })
-                setStats(res.data)
-            } catch (error) {
-                console.error('Erro ao carregar métricas', error)
-            } finally {
-                setLoading(false)
-            }
-        }
         fetchStats()
-    }, [])
+    }, [month, year])
 
     if (loading) return <div style={{ textAlign: 'center', padding: '3rem' }}><Loader2 className="animate-spin" size={32} /></div>
     if (!stats) return <div style={{ padding: '2rem' }}>Erro ao carregar dados.</div>
@@ -42,7 +48,43 @@ export function ProprietarioDashboard() {
 
     return (
         <div>
-            <h1 className="page-title" style={{ marginBottom: '1.5rem' }}>Visão Geral</h1>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <h1 className="page-title" style={{ margin: 0 }}>Visão Geral</h1>
+                
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <select 
+                        value={month} 
+                        onChange={(e) => setMonth(e.target.value === '' ? '' : parseInt(e.target.value))}
+                        className="filter-select"
+                        style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid #ddd' }}
+                    >
+                        <option value="">Todos os meses</option>
+                        <option value={1}>Janeiro</option>
+                        <option value={2}>Fevereiro</option>
+                        <option value={3}>Março</option>
+                        <option value={4}>Abril</option>
+                        <option value={5}>Maio</option>
+                        <option value={6}>Junho</option>
+                        <option value={7}>Julho</option>
+                        <option value={8}>Agosto</option>
+                        <option value={9}>Setembro</option>
+                        <option value={10}>Outubro</option>
+                        <option value={11}>Novembro</option>
+                        <option value={12}>Dezembro</option>
+                    </select>
+
+                    <select 
+                        value={year} 
+                        onChange={(e) => setYear(parseInt(e.target.value))}
+                        className="filter-select"
+                        style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid #ddd' }}
+                    >
+                        {[2024, 2025, 2026, 2027, 2028].map(y => (
+                            <option key={y} value={y}>{y}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
 
             <div className="dashboard-grid">
                 <div className="stat-card">
@@ -50,20 +92,31 @@ export function ProprietarioDashboard() {
                         <span className="stat-title">Faturamento Total</span>
                         <DollarSign className="stat-icon" size={20} color="#6b7280" />
                     </div>
-                    <span className="stat-value" style={{ color: '#6b7280' }}>{formatCurrency(stats.totalRevenue)}</span>
+                    <span className="stat-value" style={{ color: '#10b981' }}>{formatCurrency(stats.totalRevenue)}</span>
                     <span className="stat-desc">
-                        Bruto de serviços concluídos
+                        Bruto (Serviços + Peças + Deslocamento)
+                    </span>
+                </div>
+
+                <div className="stat-card" style={{ borderLeft: '4px solid #ef4444' }}>
+                    <div className="stat-header">
+                        <span className="stat-title">Despesas (Técnicos)</span>
+                        <TrendingUp className="stat-icon" size={20} color="#ef4444" style={{ transform: 'rotate(180deg)' }} />
+                    </div>
+                    <span className="stat-value" style={{ color: '#ef4444' }}>- {formatCurrency(stats.totalExpenses)}</span>
+                    <span className="stat-desc">
+                        10% de Mão de Obra + Deslocamento
                     </span>
                 </div>
 
                 <div className="stat-card" style={{ borderLeft: '4px solid #10b981' }}>
                     <div className="stat-header">
-                        <span className="stat-title">Lucro Líquido (90%)</span>
-                        <TrendingUp className="stat-icon" size={20} color="#10b981" />
+                        <span className="stat-title">Lucro Líquido</span>
+                        <BarChart3 className="stat-icon" size={20} color="#059669" />
                     </div>
-                    <span className="stat-value" style={{ color: '#10b981' }}>{formatCurrency(stats.totalProfit)}</span>
+                    <span className="stat-value" style={{ color: '#059669' }}>{formatCurrency(stats.totalProfit)}</span>
                     <span className="stat-desc">
-                        Após repasse aos técnicos
+                        Total Líquido Estimado
                     </span>
                 </div>
 

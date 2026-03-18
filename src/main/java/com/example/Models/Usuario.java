@@ -1,5 +1,6 @@
 package com.example.Models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -31,6 +32,7 @@ public class Usuario implements UserDetails {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @JsonIgnore
     @Column(name = "senha_hash", nullable = false)
     private String senha;
 
@@ -42,6 +44,15 @@ public class Usuario implements UserDetails {
 
     @Builder.Default
     private Boolean ativo = true;
+
+    @JsonIgnore
+    @Column(name = "failed_login_attempts")
+    @Builder.Default
+    private Integer failedLoginAttempts = 0;
+
+    @JsonIgnore
+    @Column(name = "account_locked_until")
+    private LocalDateTime accountLockedUntil;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

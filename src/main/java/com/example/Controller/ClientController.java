@@ -23,7 +23,7 @@ public class ClientController {
     @GetMapping
     @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO', 'TECNICO')")
     public ResponseEntity<List<ClientResponseDTO>> getAllClients(
-            @RequestParam(required = false, defaultValue = "false") Boolean includeInactive) {
+            @RequestParam(name = "includeInactive", required = false, defaultValue = "false") Boolean includeInactive) {
         return ResponseEntity.ok(clientService.getAllClients(includeInactive));
     }
 

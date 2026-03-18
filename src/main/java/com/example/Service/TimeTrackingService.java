@@ -1,16 +1,22 @@
 package com.example.Service;
 
+import com.example.DTOs.TimeTrackingListDTO;
 import com.example.DTOs.TimeTrackingRequestDTO;
 import com.example.DTOs.TimeTrackingResponseDTO;
 import com.example.Models.ServiceOrder;
 import com.example.Models.TimeTracking;
+import com.example.Models.Usuario;
 import com.example.Repository.ServiceOrderRepository;
 import com.example.Repository.TimeTrackingRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -23,14 +29,27 @@ public class TimeTrackingService {
     private final ServiceOrderRepository serviceOrderRepository;
 
     @Transactional(readOnly = true)
-    public List<TimeTrackingResponseDTO> getTimesByServiceOrderId(Long serviceOrderId) {
-        return timeTrackingRepository.findByServiceOrderId(serviceOrderId).stream()
+    public TimeTrackingListDTO getTimesByServiceOrderId(Long serviceOrderId) {
+        validateOsOwnership(serviceOrderId);
+        List<TimeTrackingResponseDTO> records = timeTrackingRepository.findByServiceOrderId(serviceOrderId).stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
+        
+        long totalMinutes = records.stream()
+                .filter(r -> r.getDurationMinutes() != null)
+                .mapToLong(TimeTrackingResponseDTO::getDurationMinutes)
+                .sum();
+        
+        return TimeTrackingListDTO.builder()
+                .records(records)
+                .totalMinutes(totalMinutes)
+                .totalFormatted(formatDuration(totalMinutes))
+                .build();
     }
 
     @Transactional
     public TimeTrackingResponseDTO createTimeTracking(Long serviceOrderId, TimeTrackingRequestDTO dto) {
+        validateOsOwnership(serviceOrderId);
         ServiceOrder order = serviceOrderRepository.findById(serviceOrderId)
                 .orElseThrow(() -> new RuntimeException("Ordem de serviço não encontrada com id " + serviceOrderId));
 
@@ -51,6 +70,8 @@ public class TimeTrackingService {
         TimeTracking timeTracking = timeTrackingRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Registro de tempo não encontrado com id " + id));
 
+        validateOsOwnership(timeTracking.getServiceOrder().getId());
+
         if (dto.getEndTime() != null) {
             timeTracking.setEndTime(dto.getEndTime());
         }
@@ -64,7 +85,35 @@ public class TimeTrackingService {
 
     @Transactional
     public void deleteTimeTracking(Long id) {
+        TimeTracking timeTracking = timeTrackingRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Registro de tempo não encontrado com id " + id));
+        
+        validateOsOwnership(timeTracking.getServiceOrder().getId());
         timeTrackingRepository.deleteById(id);
+    }
+
+    private void validateOsOwnership(Long serviceOrderId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof Usuario)) {
+            throw new AccessDeniedException("Usuário não autenticado");
+        }
+        
+        Usuario user = (Usuario) auth.getPrincipal();
+        
+        if ("TECNICO".equals(user.getRole())) {
+            ServiceOrder order = serviceOrderRepository.findById(serviceOrderId)
+                    .orElseThrow(() -> new RuntimeException("Ordem de serviço não encontrada"));
+            
+            if (order.getTechnician() == null || !order.getTechnician().getId().equals(user.getId())) {
+                throw new AccessDeniedException("Você não tem permissão para acessar registros de tempo desta Ordem de Serviço");
+            }
+        }
+    }
+
+    private String formatDuration(long minutes) {
+        long h = minutes / 60;
+        long m = minutes % 60;
+        return String.format("%02d:%02d", h, m);
     }
 
     private TimeTrackingResponseDTO mapToDTO(TimeTracking tt) {
@@ -81,6 +130,14 @@ public class TimeTrackingService {
                 .endTime(tt.getEndTime())
                 .description(tt.getDescription())
                 .durationMinutes(durationMinutes)
+                .durationFormatted(durationMinutes != null ? formatDuration(durationMinutes) : "—")
+                .startTimeFormatted(formatLocalTime(tt.getStartTime()))
+                .endTimeFormatted(formatLocalTime(tt.getEndTime()))
                 .build();
+    }
+
+    private String formatLocalTime(LocalDateTime dt) {
+        if (dt == null) return "—";
+        return dt.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
     }
 }

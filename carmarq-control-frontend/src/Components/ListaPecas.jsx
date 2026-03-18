@@ -14,13 +14,14 @@ export default function ListaPecas({ serviceOrderId, orderStatus }) {
     const [qtd, setQtd] = useState(1)
     const [valorUnitario, setValorUnitario] = useState('')
 
-    // Regra de bloqueio baseada no novo texto de status
+    const [totalPecas, setTotalPecas] = useState(0)
     const isEditable = orderStatus === 'EM_ANDAMENTO'
 
     const fetchParts = async () => {
         try {
             const res = await axios.get(`${API_URL}/${serviceOrderId}/parts`, { withCredentials: true })
-            setPecas(res.data)
+            setPecas(res.data.parts || [])
+            setTotalPecas(res.data.totalValue || 0)
         } catch (error) {
             console.error('Erro ao carregar peças', error)
         } finally {
@@ -64,10 +65,6 @@ export default function ListaPecas({ serviceOrderId, orderStatus }) {
             toast('Erro ao remover peça.', 'error')
         }
     }
-
-    const totalPecas = pecas.reduce((sum, p) => sum + (p.totalPrice || 0), 0)
-
-    if (loading) return <div style={{ textAlign: 'center', padding: '1rem' }}><Loader2 className="animate-spin" size={20} /></div>
 
     return (
         <div className="pecas-container">
