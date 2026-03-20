@@ -62,9 +62,17 @@ public class ServiceOrder {
     @Column(length = 1000)
     private String observations;
 
-    // Tipo de serviço definido manualmente pelo proprietário
-    @Column(name = "service_type", length = 200)
+    // Tipo de serviço (INSTALACAO ou MANUTENCAO)
+    @Column(name = "service_type", length = 50, nullable = false)
     private String serviceType;
+    
+    // Origem da Manutencao (CARMARQ ou VALENTIM)
+    @Column(name = "manutencao_origin", length = 30)
+    private String manutencaoOrigin;
+    
+    // Número do Chamado Obrigatório
+    @Column(name = "numero_chamado", length = 100, nullable = false)
+    private String numeroChamado;
 
     // Valor do serviço (mão de obra) — definido manualmente pelo proprietário
     @Builder.Default
@@ -76,13 +84,18 @@ public class ServiceOrder {
     @Column(name = "parts_value")
     private Double partsValue = 0.0;
 
-    // Custo de deslocamento até o cliente
+    // Total de despesas (substitui custo de deslocamento)
     @Builder.Default
-    @Column(name = "travel_cost")
-    private Double travelCost = 0.0;
+    @Column(name = "expenses_value")
+    private Double expensesValue = 0.0;
 
-    // Valor que será pago/transferido ao técnico (calculado automaticamente: 10% de serviceValue + travelCost)
-    // O total faturado (totalValue) também é calculado dinamicamente: serviceValue + travelCost + partsValue
+    // Km rodados informados manualmente pelo técnico
+    @Builder.Default
+    @Column(name = "displacement_km")
+    private Double displacementKm = 0.0;
+
+    // Valor que será pago/transferido ao técnico (calculado automaticamente: 10% de serviceValue + expensesValue)
+    // O total faturado (totalValue) também é calculado dinamicamente: serviceValue + expensesValue + partsValue
     // Estes campos não são mais persistidos diretamente no banco para garantir dinamismo.
 
     // Status do pagamento do técnico: A_RECEBER ou RECEBIDO

@@ -18,6 +18,8 @@ public class ClientResponseDTO {
     private String phone;
     private String cep;
     private String address;
+    private String cnpj;
+    private String ie;
     private Double latitude;
     private Double longitude;
     private Boolean active;

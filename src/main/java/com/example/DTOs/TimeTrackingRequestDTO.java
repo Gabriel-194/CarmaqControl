@@ -21,6 +21,9 @@ public class TimeTrackingRequestDTO {
     @Size(max = 30)
     private String type;
 
+    @NotNull(message = "Data do apontamento é obrigatória")
+    private java.time.LocalDate registeredDate;
+
     @NotNull(message = "Hora de início é obrigatória")
     private LocalDateTime startTime;
 

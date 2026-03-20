@@ -27,6 +27,7 @@ public class TimeTrackingService {
 
     private final TimeTrackingRepository timeTrackingRepository;
     private final ServiceOrderRepository serviceOrderRepository;
+    private final ServiceOrderService serviceOrderService;
 
     @Transactional(readOnly = true)
     public TimeTrackingListDTO getTimesByServiceOrderId(Long serviceOrderId) {
@@ -50,18 +51,25 @@ public class TimeTrackingService {
     @Transactional
     public TimeTrackingResponseDTO createTimeTracking(Long serviceOrderId, TimeTrackingRequestDTO dto) {
         validateOsOwnership(serviceOrderId);
+        validateMutationPermission();
         ServiceOrder order = serviceOrderRepository.findById(serviceOrderId)
                 .orElseThrow(() -> new RuntimeException("Ordem de serviço não encontrada com id " + serviceOrderId));
 
         TimeTracking timeTracking = TimeTracking.builder()
                 .serviceOrder(order)
                 .type(dto.getType())
+                .registeredDate(dto.getRegisteredDate())
                 .startTime(dto.getStartTime())
                 .endTime(dto.getEndTime())
                 .description(dto.getDescription())
                 .build();
 
         timeTracking = timeTrackingRepository.save(timeTracking);
+        
+        // Disparar recálculo do valor da Ordem de Serviço de Manutenção
+        List<TimeTracking> times = timeTrackingRepository.findByServiceOrderId(serviceOrderId);
+        serviceOrderService.refreshLaborValue(order, times);
+        
         return mapToDTO(timeTracking);
     }
 
@@ -71,7 +79,11 @@ public class TimeTrackingService {
                 .orElseThrow(() -> new RuntimeException("Registro de tempo não encontrado com id " + id));
 
         validateOsOwnership(timeTracking.getServiceOrder().getId());
+        validateMutationPermission();
 
+        if (dto.getRegisteredDate() != null) {
+            timeTracking.setRegisteredDate(dto.getRegisteredDate());
+        }
         if (dto.getEndTime() != null) {
             timeTracking.setEndTime(dto.getEndTime());
         }
@@ -80,6 +92,10 @@ public class TimeTrackingService {
         }
 
         timeTracking = timeTrackingRepository.save(timeTracking);
+        
+        List<TimeTracking> times = timeTrackingRepository.findByServiceOrderId(timeTracking.getServiceOrder().getId());
+        serviceOrderService.refreshLaborValue(timeTracking.getServiceOrder(), times);
+        
         return mapToDTO(timeTracking);
     }
 
@@ -89,7 +105,20 @@ public class TimeTrackingService {
                 .orElseThrow(() -> new RuntimeException("Registro de tempo não encontrado com id " + id));
         
         validateOsOwnership(timeTracking.getServiceOrder().getId());
+        validateMutationPermission();
         timeTrackingRepository.deleteById(id);
+        
+        List<TimeTracking> times = timeTrackingRepository.findByServiceOrderId(timeTracking.getServiceOrder().getId());
+        serviceOrderService.refreshLaborValue(timeTracking.getServiceOrder(), times);
+    }
+
+    private void validateMutationPermission() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario user = (Usuario) auth.getPrincipal();
+        
+        if ("PROPRIETARIO".equals(user.getRole())) {
+            throw new AccessDeniedException("Gestores não podem lançar registros de tempo. Esta é uma ação operacional do técnico.");
+        }
     }
 
     private void validateOsOwnership(Long serviceOrderId) {
@@ -126,6 +155,7 @@ public class TimeTrackingService {
                 .id(tt.getId())
                 .serviceOrderId(tt.getServiceOrder().getId())
                 .type(tt.getType())
+                .registeredDate(tt.getRegisteredDate())
                 .startTime(tt.getStartTime())
                 .endTime(tt.getEndTime())
                 .description(tt.getDescription())

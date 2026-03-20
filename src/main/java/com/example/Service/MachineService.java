@@ -29,10 +29,7 @@ public class MachineService {
 
         List<Machine> machines;
 
-        if ("TECNICO".equals(role)) {
-            // Técnicos veem apenas máquinas de suas OSs
-            machines = machineRepository.findAllByTechnicianId(currentUser.getId());
-        } else if (Boolean.TRUE.equals(includeInactive)) {
+        if (Boolean.TRUE.equals(includeInactive) && !"TECNICO".equals(role)) {
             machines = machineRepository.findAll();
         } else {
             machines = machineRepository.findAllByActiveTrue();
@@ -52,12 +49,21 @@ public class MachineService {
     @Transactional
     public MachineResponseDTO createMachine(MachineRequestDTO dto) {
         Machine machine = Machine.builder()
+                .name(dto.getName())
                 .machineType(dto.getMachineType())
                 .model(dto.getModel())
-                .brand(dto.getBrand())
+                .serialNumber(dto.getSerialNumber())
+                .installationPrice(dto.getInstallationPrice())
                 .description(dto.getDescription())
-                .hourlyRate(dto.getHourlyRate())
-                .estimatedHours(dto.getEstimatedHours())
+                .laserSize(dto.getLaserSize())
+                .laserKind(dto.getLaserKind())
+                .laserPower(dto.getLaserPower())
+                .machineSize(dto.getMachineSize())
+                .tonnage(dto.getTonnage())
+                .command(dto.getCommand())
+                .force(dto.getForce())
+                .diameter(dto.getDiameter())
+                .rollerCount(dto.getRollerCount())
                 .active(true)
                 .build();
 
@@ -69,12 +75,21 @@ public class MachineService {
     public MachineResponseDTO updateMachine(Long id, MachineRequestDTO dto) {
         Machine machine = findActiveById(id);
 
+        machine.setName(dto.getName());
         machine.setMachineType(dto.getMachineType());
         machine.setModel(dto.getModel());
-        machine.setBrand(dto.getBrand());
+        machine.setSerialNumber(dto.getSerialNumber());
+        machine.setInstallationPrice(dto.getInstallationPrice());
         machine.setDescription(dto.getDescription());
-        machine.setHourlyRate(dto.getHourlyRate());
-        machine.setEstimatedHours(dto.getEstimatedHours());
+        machine.setLaserSize(dto.getLaserSize());
+        machine.setLaserKind(dto.getLaserKind());
+        machine.setLaserPower(dto.getLaserPower());
+        machine.setMachineSize(dto.getMachineSize());
+        machine.setTonnage(dto.getTonnage());
+        machine.setCommand(dto.getCommand());
+        machine.setForce(dto.getForce());
+        machine.setDiameter(dto.getDiameter());
+        machine.setRollerCount(dto.getRollerCount());
 
         machine = machineRepository.save(machine);
         return mapToDTO(machine);
@@ -104,13 +119,24 @@ public class MachineService {
     private MachineResponseDTO mapToDTO(Machine machine) {
         return MachineResponseDTO.builder()
                 .id(machine.getId())
+                .name(machine.getName())
                 .machineType(machine.getMachineType())
                 .model(machine.getModel())
-                .brand(machine.getBrand())
+                .serialNumber(machine.getSerialNumber())
+                .installationPrice(machine.getInstallationPrice())
                 .description(machine.getDescription())
-                .hourlyRate(machine.getHourlyRate())
-                .estimatedHours(machine.getEstimatedHours())
+                .laserSize(machine.getLaserSize())
+                .laserKind(machine.getLaserKind())
+                .laserPower(machine.getLaserPower())
+                .machineSize(machine.getMachineSize())
+                .tonnage(machine.getTonnage())
+                .command(machine.getCommand())
+                .force(machine.getForce())
+                .diameter(machine.getDiameter())
+                .rollerCount(machine.getRollerCount())
                 .active(machine.getActive())
+                .createdAt(machine.getCreatedAt())
+                .updatedAt(machine.getUpdatedAt())
                 .build();
     }
 }

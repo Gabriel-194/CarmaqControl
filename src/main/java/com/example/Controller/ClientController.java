@@ -2,6 +2,7 @@ package com.example.Controller;
 
 import com.example.DTOs.ClientRequestDTO;
 import com.example.DTOs.ClientResponseDTO;
+import com.example.DTOs.TravelEstimateDTO;
 import com.example.Service.ClientService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,15 +34,21 @@ public class ClientController {
         return ResponseEntity.ok(clientService.getClientById(id));
     }
 
+    @GetMapping("/{id}/travel-estimate")
+    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO', 'TECNICO')")
+    public ResponseEntity<TravelEstimateDTO> getTravelEstimate(@PathVariable Long id) {
+        return ResponseEntity.ok(clientService.getTravelEstimate(id));
+    }
+
     @PostMapping
-    @PreAuthorize("hasAuthority('PROPRIETARIO')")
+    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO', 'TECNICO')")
     public ResponseEntity<ClientResponseDTO> createClient(@Valid @RequestBody ClientRequestDTO dto) {
         ClientResponseDTO response = clientService.createClient(dto);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('PROPRIETARIO')")
+    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO', 'TECNICO')")
     public ResponseEntity<ClientResponseDTO> updateClient(@PathVariable Long id, @Valid @RequestBody ClientRequestDTO dto) {
         return ResponseEntity.ok(clientService.updateClient(id, dto));
     }

@@ -3,14 +3,25 @@ import { useParams, useNavigate } from 'react-router-dom'
 import Sidebar from '../Components/Sidebar'
 import TabelaTempos from '../Components/TabelaTempos'
 import ListaPecas from '../Components/ListaPecas'
+import ListaDespesas from '../Components/ListaDespesas'
 import ServicePhotos from '../Components/ServicePhotos'
 import { useAuth } from '../contexts/AuthContext'
 import { toast } from '../Components/ui/Toaster'
-import { ArrowLeft, CheckCircle, Clock, PenTool, Camera, Loader2, AlertTriangle, Play, DollarSign, Lock } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Clock, PenTool, Camera, Loader2, AlertTriangle, Play, DollarSign, Lock, Download } from 'lucide-react'
 import axios from 'axios'
 import '../Styles/OrdemDetalhes.css'
 
 const API_URL = 'http://localhost:8080/api/service-orders'
+
+const typeLabels = {
+    LASER: 'Laser',
+    DOBRADEIRA: 'Dobradeira',
+    GUILHOTINA: 'Guilhotina',
+    CURVADORA_TUBO: 'Curvadora de Tubo',
+    METALEIRA: 'Metaleira',
+    CALANDRA: 'Calandra',
+    GRAVADORA_LASER: 'Gravadora a Laser',
+}
 
 // Página de Detalhes da Ordem de Serviço — integrada com API real
 export default function OrdemDetalhes() {
@@ -22,12 +33,14 @@ export default function OrdemDetalhes() {
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState('detalhes')
     const [serviceDescription, setServiceDescription] = useState('')
+    const [displacementKmInput, setDisplacementKmInput] = useState('')
 
     const fetchOS = async () => {
         try {
             const res = await axios.get(`${API_URL}/${id}`, { withCredentials: true })
             setOsData(res.data)
             setServiceDescription(res.data.serviceDescription || '')
+            setDisplacementKmInput(res.data.displacementKm || '')
         } catch (error) {
             toast('Erro ao carregar detalhes da OS.', 'error')
             navigate('/ordens')
@@ -54,10 +67,39 @@ export default function OrdemDetalhes() {
     // Salvar descrição do serviço realizado
     const handleSaveDescription = async () => {
         try {
-            await axios.put(`${API_URL}/${id}`, { serviceDescription }, { withCredentials: true })
+            await axios.put(`${API_URL}/${id}/description`, { serviceDescription }, { withCredentials: true })
             toast('Descrição salva!', 'success')
+            fetchOS()
         } catch (error) {
             toast('Erro ao salvar descrição.', 'error')
+        }
+    }
+
+    const handleSaveDisplacement = async () => {
+        try {
+            await axios.put(`${API_URL}/${id}/displacement`, { displacementKm: parseFloat(displacementKmInput) }, { withCredentials: true })
+            toast('Km de deslocamento salvo!', 'success')
+            fetchOS()
+        } catch (error) {
+            toast('Erro ao salvar deslocamento.', 'error')
+        }
+    }
+
+    const handleDownloadReport = async () => {
+        try {
+            const response = await axios.get(`${API_URL}/${id}/report`, {
+                responseType: 'blob',
+                withCredentials: true
+            });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `OS_${id}_Relatorio.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (error) {
+            toast('Erro ao gerar relatório PDF.', 'error');
         }
     }
 
@@ -118,7 +160,7 @@ export default function OrdemDetalhes() {
                             <div className="info-divider"></div>
                             <div className="detail-row">
                                 <strong>Máquina:</strong>
-                                <p>{osData.machineType} — {osData.machineName}</p>
+                                <p>{typeLabels[osData.machineType] || osData.machineType} — {osData.machineName}</p>
                             </div>
                             <div className="detail-row">
                                 <strong>Técnico Responsável:</strong>
@@ -129,15 +171,55 @@ export default function OrdemDetalhes() {
                                 <p>{osData.serviceDate ? new Date(osData.serviceDate).toLocaleDateString('pt-BR') : 'Não informada'}</p>
                             </div>
                             {osData.serviceType && (
-                                <div className="detail-row">
-                                    <strong>Tipo de Serviço:</strong>
-                                    <p>{osData.serviceType}</p>
-                                </div>
+                                <>
+                                    <div className="detail-row">
+                                        <strong>Tipo de Serviço:</strong>
+                                        <p>{osData.serviceType}</p>
+                                    </div>
+                                    {osData.serviceType === 'MANUTENCAO' && (
+                                        <div className="detail-row">
+                                            <strong>Origem:</strong>
+                                            <p>{osData.manutencaoOrigin === 'VALENTIM' ? 'Valentim - Garantia (R$ 185/h)' : 'Carmarq (R$ 250/h)'}</p>
+                                        </div>
+                                    )}
+                                </>
                             )}
                             {osData.problemDescription && (
                                 <div className="detail-row">
                                     <strong>Relato do Problema:</strong>
                                     <p>{osData.problemDescription}</p>
+                                </div>
+                            )}
+                            {osData.distanceKm && (
+                                <div className="detail-row" style={{ borderTop: '1px dashed #eee', marginTop: '0.5rem', paddingTop: '0.5rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary-color)' }}>
+                                        <Clock size={16} /> 
+                                        <strong>Viagem Estimada (API):</strong>
+                                        <span>{osData.distanceKm}km ({osData.estimatedMinutes} min)</span>
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {user?.role === 'TECNICO' && (
+                                <div className="detail-row" style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '1rem', borderTop: '1px dashed #eee', paddingTop: '1rem' }}>
+                                    <strong style={{ flex: 1 }}>Deslocamento: Km Percorridos:</strong>
+                                    <input 
+                                        type="number" 
+                                        className="form-input" 
+                                        value={displacementKmInput} 
+                                        onChange={e => setDisplacementKmInput(e.target.value)}
+                                        disabled={osData.status !== 'EM_ANDAMENTO'}
+                                        style={{ width: '100px', margin: 0 }}
+                                        placeholder="Ex: 50"
+                                    />
+                                    <button 
+                                        className="btn-primary" 
+                                        onClick={handleSaveDisplacement} 
+                                        disabled={osData.status !== 'EM_ANDAMENTO'}
+                                        style={{ padding: '0.4rem 1rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                                    >
+                                        Salvar Km
+                                    </button>
                                 </div>
                             )}
                         </div>
@@ -197,6 +279,12 @@ export default function OrdemDetalhes() {
                                     <PenTool size={16} /> Peças
                                 </button>
                                 <button
+                                    className={`tab-btn ${activeTab === 'despesas' ? 'active' : ''}`}
+                                    onClick={() => setActiveTab('despesas')}
+                                >
+                                    <DollarSign size={16} /> Despesas
+                                </button>
+                                <button
                                     className={`tab-btn ${activeTab === 'fotos' ? 'active' : ''}`}
                                     onClick={() => setActiveTab('fotos')}
                                 >
@@ -205,8 +293,9 @@ export default function OrdemDetalhes() {
                             </div>
 
                             <div className="tab-content">
-                                {activeTab === 'detalhes' && <TabelaTempos serviceOrderId={id} />}
+                                {activeTab === 'detalhes' && <TabelaTempos serviceOrderId={id} userRole={user?.role} osTipo={osData.serviceType} onUpdate={fetchOS} />}
                                 {activeTab === 'pecas' && <ListaPecas serviceOrderId={id} orderStatus={osData.status} />}
+                                {activeTab === 'despesas' && <ListaDespesas serviceOrderId={id} orderStatus={osData.status} onUpdate={fetchOS} />}
                                 {activeTab === 'fotos' && <ServicePhotos serviceOrderId={id} orderStatus={osData.status} />}
                             </div>
                         </div>
@@ -214,40 +303,53 @@ export default function OrdemDetalhes() {
 
                     <div className="side-column">
                         <div className="card actions-card">
-                            <h3>Ações</h3>
-                            {osData.status === 'ABERTA' && (
-                                <button
-                                    className="btn-primary btn-full mb-2"
-                                    onClick={() => handleStatusChange('EM_ANDAMENTO')}
-                                    style={{ background: '#f59e0b' }}
-                                >
-                                    <Play size={18} /> Iniciar Serviço
-                                </button>
+                            <h3 style={{ marginBottom: '1rem' }}>Ações</h3>
+                            {user?.role === 'TECNICO' && (
+                                <>
+                                    {osData.status === 'ABERTA' && (
+                                        <button
+                                            className="btn-primary btn-full mb-2"
+                                            onClick={() => handleStatusChange('EM_ANDAMENTO')}
+                                            style={{ background: '#f59e0b' }}
+                                        >
+                                            <Play size={18} /> Iniciar Serviço
+                                        </button>
+                                    )}
+                                    {osData.status === 'EM_ANDAMENTO' && (
+                                        <button
+                                            className="btn-primary btn-full btn-success mb-2"
+                                            onClick={() => handleStatusChange('CONCLUIDA')}
+                                        >
+                                            <CheckCircle size={18} /> Finalizar Serviço
+                                        </button>
+                                    )}
+                                    {(osData.status === 'ABERTA' || osData.status === 'EM_ANDAMENTO') && (
+                                        <button
+                                            className="btn-secondary btn-full mb-2"
+                                            onClick={() => handleStatusChange('REQUER_INSPECAO')}
+                                        >
+                                            <AlertTriangle size={18} /> Requer Inspeção
+                                        </button>
+                                    )}
+                                </>
                             )}
-                            {osData.status === 'EM_ANDAMENTO' && (
-                                <button
-                                    className="btn-primary btn-full btn-success mb-2"
-                                    onClick={() => handleStatusChange('CONCLUIDA')}
-                                >
-                                    <CheckCircle size={18} /> Finalizar Serviço
-                                </button>
-                            )}
-                            {(osData.status === 'ABERTA' || osData.status === 'EM_ANDAMENTO') && (
-                                <button
-                                    className="btn-secondary btn-full mb-2"
-                                    onClick={() => handleStatusChange('REQUER_INSPECAO')}
-                                >
-                                    <AlertTriangle size={18} /> Requer Inspeção
-                                </button>
-                            )}
-                            {osData.status !== 'CANCELADA' && osData.status !== 'CONCLUIDA' && (
+
+                            {/* ADMIN (Proprietário) pode apenas cancelar */}
+                            {(osData.status === 'ABERTA' || osData.status === 'EM_ANDAMENTO' || osData.status === 'REQUER_INSPECAO') && (
                                 <button
                                     className="btn-secondary btn-full"
-                                    style={{ color: 'var(--danger-color)' }}
+                                    style={{ color: 'var(--danger-color)', border: '1px solid var(--danger-color)' }}
                                     onClick={() => handleStatusChange('CANCELADA')}
                                 >
                                     Cancelar OS
                                 </button>
+                            )}
+                            
+                            {/* Mensagem informativa para Admin sobre restrição */}
+                            {user?.role === 'PROPRIETARIO' && osData.status === 'ABERTA' && (
+                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem', textAlign: 'center' }}>
+                                    Aguardando início pelo técnico responsável.
+                                </p>
                             )}
                         </div>
 
@@ -261,8 +363,12 @@ export default function OrdemDetalhes() {
                                         <span>R$ {(osData.serviceValue || 0).toFixed(2)}</span>
                                     </div>
                                     <div className="finance-row">
-                                        <span>Deslocamento</span>
-                                        <span>R$ {(osData.travelCost || 0).toFixed(2)}</span>
+                                        <span>Deslocamento ({osData.displacementKm || 0} km)</span>
+                                        <span>R$ {((osData.displacementKm || 0) * 2.20).toFixed(2)}</span>
+                                    </div>
+                                    <div className="finance-row">
+                                        <span>Despesas</span>
+                                        <span>R$ {(osData.expensesValue || 0).toFixed(2)}</span>
                                     </div>
                                     <div className="finance-row">
                                         <span>Peças</span>
@@ -310,6 +416,23 @@ export default function OrdemDetalhes() {
                                 </>
                             )}
                         </div>
+                        <button 
+                            className="btn-secondary btn-full" 
+                            onClick={handleDownloadReport} 
+                            style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center', 
+                                gap: '0.5rem', 
+                                marginTop: '1rem', 
+                                fontSize: '0.85rem', 
+                                padding: '0.5rem',   
+                                color: 'var(--text-muted)'
+                            }}
+                        >
+                            <Download size={16} /> Exportar Relatório PDF
+                        </button>
+
                     </div>
                 </div>
             </main>

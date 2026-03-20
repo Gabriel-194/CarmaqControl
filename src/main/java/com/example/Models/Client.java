@@ -38,6 +38,12 @@ public class Client {
     @Column(length = 255)
     private String address;
 
+    @Column(length = 20)
+    private String cnpj;
+
+    @Column(name = "ie", length = 30)
+    private String ie;
+
     @Column
     private Double latitude;
 

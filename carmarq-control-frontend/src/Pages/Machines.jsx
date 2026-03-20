@@ -8,6 +8,16 @@ import '../Styles/Machines.css'
 
 const API_URL = 'http://localhost:8080/api/machines'
 
+const typeLabels = {
+    LASER: 'Laser',
+    DOBRADEIRA: 'Dobradeira',
+    GUILHOTINA: 'Guilhotina',
+    CURVADORA_TUBO: 'Curvadora de Tubo',
+    METALEIRA: 'Metaleira',
+    CALANDRA: 'Calandra',
+    GRAVADORA_LASER: 'Gravadora a Laser',
+}
+
 // Página CRUD da Biblioteca de Máquinas
 export default function Machines() {
     const [machines, setMachines] = useState([])
@@ -92,11 +102,12 @@ export default function Machines() {
 
     const filtered = machines.filter(m => {
         const model = m.model?.toLowerCase() || ''
+        const name = m.name?.toLowerCase() || ''
         const type = m.machineType?.toLowerCase() || ''
-        const brand = m.brand?.toLowerCase() || ''
+        const serial = m.serialNumber?.toLowerCase() || ''
         const search = searchTerm.toLowerCase()
         
-        return model.includes(search) || type.includes(search) || brand.includes(search)
+        return model.includes(search) || name.includes(search) || type.includes(search) || serial.includes(search)
     })
 
     return (
@@ -106,7 +117,7 @@ export default function Machines() {
                 <header className="page-header">
                     <div>
                         <h1 className="page-title">Biblioteca de Máquinas</h1>
-                        <p className="page-subtitle">Gerencie os modelos e valores de serviço</p>
+                        <p className="page-subtitle">Gerencie os modelos e especificações técnicas</p>
                     </div>
                     <button className="btn-primary" onClick={openNew}>
                         <Plus size={20} /> Nova Máquina
@@ -118,7 +129,7 @@ export default function Machines() {
                         <Search className="search-icon" />
                         <input
                             type="text"
-                            placeholder="Buscar por modelo, tipo ou marca..."
+                            placeholder="Buscar por nome, modelo, tipo ou serial..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="search-input"
@@ -149,10 +160,10 @@ export default function Machines() {
                             <thead>
                                 <tr>
                                     <th>Tipo</th>
+                                    <th>Nome</th>
                                     <th>Modelo</th>
-                                    <th>Marca</th>
-                                    <th>Hora Técnica</th>
-                                    <th>Horas Est.</th>
+                                    <th>Núm. Série</th>
+                                    <th>Instalação</th>
                                     <th>Status</th>
                                     <th className="text-right">Ações</th>
                                 </tr>
@@ -160,11 +171,11 @@ export default function Machines() {
                             <tbody>
                                 {filtered.map(m => (
                                     <tr key={m.id}>
-                                        <td className="font-bold">{m.machineType}</td>
+                                        <td className="font-bold">{typeLabels[m.machineType] || m.machineType}</td>
+                                        <td>{m.name}</td>
                                         <td>{m.model}</td>
-                                        <td className="text-muted">{m.brand || '—'}</td>
-                                        <td className="value-highlight">R$ {(m.hourlyRate || 0).toFixed(2)}</td>
-                                        <td>{m.estimatedHours}h</td>
+                                        <td className="text-muted">{m.serialNumber}</td>
+                                        <td className="font-bold">R$ {(m.installationPrice || 0).toFixed(2)}</td>
                                         <td>
                                             <span className={m.active ? 'badge-active' : 'badge-inactive'}>
                                                 {m.active ? 'Ativa' : 'Inativa'}

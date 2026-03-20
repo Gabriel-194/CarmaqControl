@@ -2,7 +2,6 @@ package com.example.DTOs;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,7 +23,7 @@ public class ServiceOrderRequestDTO {
     @NotNull(message = "ID da máquina é obrigatório")
     private Long machineId;
 
-    @NotNull(message = "ID do técnico responsável é obrigatório")
+    // ID do técnico agora é verificado pelo backend (se for tecnico não é mandatório)
     private Long technicianId;
 
     @NotNull(message = "Data do atendimento é obrigatória")
@@ -39,16 +38,21 @@ public class ServiceOrderRequestDTO {
     @Size(max = 1000, message = "Observações não podem exceder 1000 caracteres")
     private String observations;
 
-    // Tipo de serviço definido manualmente pelo proprietário
+    // Tipo de serviço restrito
     @NotBlank(message = "Tipo de serviço é obrigatório")
-    @Size(max = 200, message = "Tipo de serviço não pode exceder 200 caracteres")
+    @Size(max = 50, message = "Tipo de serviço excessivo")
     private String serviceType;
+    
+    // Novo Número de Chamado
+    @NotBlank(message = "Número do chamado é obrigatório")
+    private String numeroChamado;
+    
+    // Origem se for Manutencao
+    private String manutencaoOrigin;
 
-    // Valor do serviço (mão de obra) definido manualmente pelo proprietário
-    @NotNull(message = "Valor do serviço é obrigatório")
-    @Positive(message = "Valor do serviço deve ser positivo")
+    // Km de deslocamento informados pelo tecnico
+    private Double displacementKm;
+
+    // Valor do serviço (mão de obra) definido manualmente (Proprietário) ou calculado (Manutenção)
     private Double serviceValue;
-
-    // Custo de deslocamento (opcional, pode ser preenchido depois)
-    private Double travelCost;
 }

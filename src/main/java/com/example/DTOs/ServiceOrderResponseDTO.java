@@ -40,13 +40,22 @@ public class ServiceOrderResponseDTO {
     private String serviceDescription;
     private String observations;
 
-    // Tipo de serviço definido manualmente
+    // Tipo de serviço restrito
     private String serviceType;
+    
+    // Novo Número de Chamado
+    private String numeroChamado;
+    
+    // Origem da Manutenção
+    private String manutencaoOrigin;
+
+    // Km rodados para cobrança de deslocamento
+    private Double displacementKm;
 
     // Valores financeiros (podem ser null ou zero para TECNICO)
     private Double serviceValue;
     private Double partsValue;
-    private Double travelCost;
+    private Double expensesValue;
     private Double totalValue;
 
     // Valor visível ao técnico
@@ -61,4 +70,9 @@ public class ServiceOrderResponseDTO {
     // Datas
     private LocalDateTime openedAt;
     private LocalDateTime closedAt;
+
+    // Campos logísticos (calculados dinamicamente no mapeamento)
+    private Double distanceKm;
+    private Integer estimatedMinutes;
+    private Double estimatedTravelCost;
 }

@@ -35,4 +35,8 @@ public class ServicePart {
     // Preço unitário da peça
     @Column(name = "unit_price", nullable = false)
     private Double unitPrice;
+
+    public Double getTotalPrice() {
+        return (unitPrice != null && quantity != null) ? unitPrice * quantity : 0.0;
+    }
 }

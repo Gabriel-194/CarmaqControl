@@ -76,7 +76,7 @@ export default function Ordens() {
                         <h1 className="page-title">Ordens de Serviço</h1>
                         <p className="page-subtitle">Gerencie e acompanhe as solicitações</p>
                     </div>
-                    {user?.role === 'PROPRIETARIO' && (
+                    {(user?.role === 'PROPRIETARIO' || user?.role === 'TECNICO') && (
                         <button
                             className="btn-primary btn-success"
                             onClick={() => navigate('/nova-os')}
@@ -91,7 +91,7 @@ export default function Ordens() {
                         <Search className="search-icon" />
                         <input
                             type="text"
-                            placeholder="Buscar por cliente, ID ou técnico..."
+                            placeholder="Buscar por cliente, chamado, ID ou técnico..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="search-input"
@@ -162,10 +162,13 @@ export default function Ordens() {
                             <thead>
                                 <tr>
                                     <th>ID</th>
+                                    <th>Chamado</th>
                                     <th>Cliente</th>
+                                    <th>Tipo</th>
+                                    <th>Origem</th>
                                     <th>Máquina</th>
                                     <th>Técnico</th>
-                                    <th>Data Atendimento</th>
+                                    <th>Data</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
@@ -173,10 +176,34 @@ export default function Ordens() {
                                 {filtered.map((os) => (
                                     <tr key={os.id} onClick={() => navigate(`/ordens/${os.id}`)}>
                                         <td>#{os.id}</td>
+                                        <td className="font-mono" style={{ fontSize: '0.85rem' }}>{os.numeroChamado || '—'}</td>
                                         <td className="font-bold">{os.clientName}</td>
+                                        <td>
+                                            <span style={{ 
+                                                fontSize: '0.75rem', 
+                                                padding: '0.2rem 0.5rem', 
+                                                borderRadius: '4px',
+                                                backgroundColor: os.serviceType === 'INSTALACAO' ? '#eff6ff' : '#fff7ed',
+                                                color: os.serviceType === 'INSTALACAO' ? '#1e40af' : '#9a3412',
+                                                fontWeight: '600'
+                                            }}>
+                                                {os.serviceType === 'INSTALACAO' ? 'Instalação' : 'Manutenção'}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {os.serviceType === 'MANUTENCAO' ? (
+                                                <span style={{ 
+                                                    fontSize: '0.75rem', 
+                                                    color: os.manutencaoOrigin === 'VALENTIM' ? '#059669' : '#0284c7',
+                                                    fontWeight: '500'
+                                                }}>
+                                                    {os.manutencaoOrigin === 'VALENTIM' ? 'Garantia' : 'Carmarq'}
+                                                </span>
+                                            ) : '—'}
+                                        </td>
                                         <td>{os.machineName}</td>
                                         <td>{os.technicianName}</td>
-                                        <td>{formatDate(os.serviceDate)}</td>
+                                        <td style={{ whiteSpace: 'nowrap' }}>{formatDate(os.serviceDate)}</td>
                                         <td>
                                             <span className={`status-badge ${statusMap[os.status]?.css || ''}`}>
                                                 {statusMap[os.status]?.label || os.status}

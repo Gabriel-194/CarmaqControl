@@ -2,6 +2,7 @@ package com.example.Service;
 
 import com.example.DTOs.ClientRequestDTO;
 import com.example.DTOs.ClientResponseDTO;
+import com.example.DTOs.TravelEstimateDTO;
 import com.example.Models.Client;
 import com.example.Models.Usuario;
 import com.example.Repository.ClientRepository;
@@ -19,6 +20,7 @@ import java.util.stream.Collectors;
 public class ClientService {
 
     private final ClientRepository clientRepository;
+    private final TravelCalculationService travelCalculationService;
 
     @Transactional(readOnly = true)
     public List<ClientResponseDTO> getAllClients(Boolean includeInactive) {
@@ -28,10 +30,7 @@ public class ClientService {
 
         List<Client> clients;
 
-        if ("TECNICO".equals(role)) {
-            // Técnicos veem apenas clientes de suas OSs
-            clients = clientRepository.findAllByTechnicianId(currentUser.getId());
-        } else if (Boolean.TRUE.equals(includeInactive)) {
+        if (Boolean.TRUE.equals(includeInactive) && !"TECNICO".equals(role)) {
             clients = clientRepository.findAll();
         } else {
             clients = clientRepository.findAllByActiveTrue();
@@ -57,6 +56,8 @@ public class ClientService {
                 .phone(dto.getPhone())
                 .cep(dto.getCep())
                 .address(dto.getAddress())
+                .cnpj(dto.getCnpj())
+                .ie(dto.getIe())
                 .latitude(dto.getLatitude())
                 .longitude(dto.getLongitude())
                 .active(true)
@@ -76,6 +77,8 @@ public class ClientService {
         client.setPhone(dto.getPhone());
         client.setCep(dto.getCep());
         client.setAddress(dto.getAddress());
+        client.setCnpj(dto.getCnpj());
+        client.setIe(dto.getIe());
         client.setLatitude(dto.getLatitude());
         client.setLongitude(dto.getLongitude());
 
@@ -98,6 +101,24 @@ public class ClientService {
         clientRepository.save(client);
     }
 
+    @Transactional(readOnly = true)
+    public TravelEstimateDTO getTravelEstimate(Long clientId) {
+        Client client = clientRepository.findById(clientId)
+                .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
+
+        if (client.getLatitude() == null || client.getLongitude() == null) {
+            throw new RuntimeException("Cliente não possui coordenadas cadastradas para cálculo de viagem");
+        }
+
+        Double distance = travelCalculationService.calculateDistance(client.getLatitude(), client.getLongitude());
+        
+        return TravelEstimateDTO.builder()
+                .distanceKm(Math.round(distance * 100.0) / 100.0)
+                .estimatedMinutes(travelCalculationService.estimateMinutes(distance))
+                .estimatedCost(Math.round(travelCalculationService.estimateCost(distance) * 100.0) / 100.0)
+                .build();
+    }
+
     private Client findClientByIdAndActive(Long id) {
         return clientRepository.findById(id)
                 .filter(Client::getActive)
@@ -113,6 +134,8 @@ public class ClientService {
                 .phone(client.getPhone())
                 .cep(client.getCep())
                 .address(client.getAddress())
+                .cnpj(client.getCnpj())
+                .ie(client.getIe())
                 .latitude(client.getLatitude())
                 .longitude(client.getLongitude())
                 .active(client.getActive())

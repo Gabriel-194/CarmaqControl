@@ -1,5 +1,6 @@
 package com.example.Models;
 
+import com.example.Domain.MachineTypeEnum;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -8,7 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-// Entidade JPA para a Biblioteca de Máquinas
+// Entidade JPA para a Biblioteca de Máquinas refatorada para tipos específicos
 @Data
 @Builder
 @NoArgsConstructor
@@ -21,29 +22,61 @@ public class Machine {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Tipo da máquina (ex: Ar Condicionado, Refrigerador, Compressor)
-    @Column(name = "machine_type", nullable = false, length = 100)
-    private String machineType;
+    // Nome identificador da máquina
+    @Column(nullable = false, length = 150)
+    private String name;
+
+    // Tipo da máquina (discriminador central)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "machine_type", nullable = false)
+    private MachineTypeEnum machineType;
 
     // Modelo da máquina
     @Column(nullable = false, length = 150)
     private String model;
 
-    // Marca/fabricante
-    @Column(length = 100)
-    private String brand;
+    // Número de série (obrigatório para identificação técnica)
+    @Column(name = "serial_number", nullable = false, length = 100)
+    private String serialNumber;
+
+    // Preço de instalação sugerido para esta máquina
+    @Column(name = "installation_price")
+    private Double installationPrice;
 
     // Descrição técnica adicional
     @Column(length = 500)
     private String description;
 
-    // Valor da hora técnica para este tipo de máquina (usado para cálculo automático)
-    @Column(name = "hourly_rate", nullable = false)
-    private Double hourlyRate;
+    // --- CAMPOS ESPECÍFICOS (Nullable na DB, validados por tipo no frontend) ---
 
-    // Estimativa de horas de serviço padrão para este tipo de máquina
-    @Column(name = "estimated_hours", nullable = false)
-    private Double estimatedHours;
+    // LASER / GRAVADORA_LASER
+    @Column(name = "laser_size")
+    private String laserSize;
+
+    @Column(name = "laser_kind") // FECHADA / ABERTA
+    private String laserKind;
+
+    @Column(name = "laser_power") // Watts
+    private Double laserPower;
+
+    // DOBRADEIRA / GUILHOTINA / CURVADORA_TUBO / METALEIRA / CALANDRA
+    @Column(name = "machine_size")
+    private String machineSize;
+
+    @Column(name = "tonnage")
+    private Double tonnage;
+
+    @Column(name = "command")
+    private String command;
+
+    @Column(name = "force")
+    private Double force;
+
+    @Column(name = "diameter")
+    private Double diameter;
+
+    @Column(name = "roller_count")
+    private Integer rollerCount;
 
     // Soft delete
     @Builder.Default

@@ -38,7 +38,7 @@ createRoot(document.getElementById('root')).render(
                     } />
 
                     <Route path="/nova-os" element={
-                        <PrivateRoute roles={['PROPRIETARIO']}><NovaOS /></PrivateRoute>
+                        <PrivateRoute roles={['PROPRIETARIO', 'TECNICO']}><NovaOS /></PrivateRoute>
                     } />
 
                     <Route path="/usuarios" element={

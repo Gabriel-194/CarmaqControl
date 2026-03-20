@@ -46,13 +46,19 @@ export default function Sidebar() {
                     Ordens de Serviço
                 </Link>
 
-                {/* Clientes — visível apenas para PROPRIETARIO e FINANCEIRO */}
-                {user.role !== 'TECNICO' && (
-                    <Link to="/clientes" className={getLinkClass('/clientes')}>
-                        <Building2 className="icon" />
-                        Clientes
+                {/* Nova OS — visível para PROPRIETARIO e TECNICO */}
+                {(user.role === 'PROPRIETARIO' || user.role === 'TECNICO') && (
+                    <Link to="/nova-os" className={getLinkClass('/nova-os')}>
+                        <ClipboardList className="icon" />
+                        Nova OS
                     </Link>
                 )}
+
+                {/* Clientes — visível para todos os cargos autorizados */}
+                <Link to="/clientes" className={getLinkClass('/clientes')}>
+                    <Building2 className="icon" />
+                    Clientes
+                </Link>
 
                 {/* Biblioteca de Máquinas — visível apenas para PROPRIETARIO e FINANCEIRO */}
                 {user.role !== 'TECNICO' && (

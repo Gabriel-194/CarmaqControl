@@ -1,26 +1,77 @@
 import React, { useState, useEffect } from 'react'
 import { X, Save } from 'lucide-react'
 
-// Modal para criar/editar máquina na Biblioteca de Máquinas
+// Mapeamento de tipo para campos técnicos específicos
+const fieldsByType = {
+    LASER: ['laserSize', 'laserKind', 'laserPower'],
+    DOBRADEIRA: ['machineSize', 'tonnage', 'command'],
+    GUILHOTINA: ['machineSize', 'tonnage', 'command'],
+    CURVADORA_TUBO: ['machineSize', 'command', 'force', 'diameter'],
+    METALEIRA: ['machineSize', 'tonnage'],
+    CALANDRA: ['machineSize', 'command', 'force', 'diameter', 'rollerCount'],
+    GRAVADORA_LASER: ['machineSize', 'laserPower'],
+}
+
+// Labels amigáveis em português
+const typeLabels = {
+    LASER: 'Laser',
+    DOBRADEIRA: 'Dobradeira',
+    GUILHOTINA: 'Guilhotina',
+    CURVADORA_TUBO: 'Curvadora de Tubo',
+    METALEIRA: 'Metaleira',
+    CALANDRA: 'Calandra',
+    GRAVADORA_LASER: 'Gravadora a Laser',
+}
+
+const fieldLabels = {
+    laserSize: 'Tamanho da Mesa',
+    laserKind: 'Tipo (Fechada / Aberta)',
+    laserPower: 'Potência (W)',
+    machineSize: 'Tamanho',
+    tonnage: 'Tonelagem',
+    command: 'Comando',
+    force: 'Força',
+    diameter: 'Diâmetro máximo (mm)',
+    rollerCount: 'Quantidade de Rolos',
+}
+
 export default function MachineModal({ machine, onClose, onSave, errors = {} }) {
     const [formData, setFormData] = useState({
+        name: '',
         machineType: '',
         model: '',
-        brand: '',
+        serialNumber: '',
+        installationPrice: '',
         description: '',
-        hourlyRate: '',
-        estimatedHours: ''
+        laserSize: '',
+        laserKind: '',
+        laserPower: '',
+        machineSize: '',
+        tonnage: '',
+        command: '',
+        force: '',
+        diameter: '',
+        rollerCount: ''
     })
 
     useEffect(() => {
         if (machine) {
             setFormData({
+                name: machine.name || '',
                 machineType: machine.machineType || '',
                 model: machine.model || '',
-                brand: machine.brand || '',
+                serialNumber: machine.serialNumber || '',
+                installationPrice: machine.installationPrice || '',
                 description: machine.description || '',
-                hourlyRate: machine.hourlyRate || '',
-                estimatedHours: machine.estimatedHours || ''
+                laserSize: machine.laserSize || '',
+                laserKind: machine.laserKind || '',
+                laserPower: machine.laserPower || '',
+                machineSize: machine.machineSize || '',
+                tonnage: machine.tonnage || '',
+                command: machine.command || '',
+                force: machine.force || '',
+                diameter: machine.diameter || '',
+                rollerCount: machine.rollerCount || ''
             })
         }
     }, [machine])
@@ -32,12 +83,23 @@ export default function MachineModal({ machine, onClose, onSave, errors = {} }) 
 
     const handleSubmit = (e) => {
         e.preventDefault()
-        onSave({
-            ...formData,
-            hourlyRate: parseFloat(formData.hourlyRate),
-            estimatedHours: parseFloat(formData.estimatedHours)
+        
+        // Limpa campos que não pertencem ao tipo selecionado antes de enviar
+        const cleanedData = { ...formData }
+        const allowedFields = fieldsByType[formData.machineType] || []
+        
+        Object.keys(fieldsByType).forEach(type => {
+            fieldsByType[type].forEach(field => {
+                if (!allowedFields.includes(field)) {
+                    delete cleanedData[field]
+                }
+            })
         })
+
+        onSave(cleanedData)
     }
+
+    const selectedTypeFields = fieldsByType[formData.machineType] || []
 
     return (
         <div className="modal-overlay" onClick={onClose}>
@@ -53,86 +115,125 @@ export default function MachineModal({ machine, onClose, onSave, errors = {} }) 
                     <div className="form-row">
                         <div className="form-group">
                             <label>Tipo da Máquina *</label>
-                            <input
-                                type="text"
+                            <select
                                 name="machineType"
                                 className={`form-input ${errors.machineType ? 'input-error' : ''}`}
-                                placeholder="Ex: Ar Condicionado, Compressor..."
                                 value={formData.machineType}
                                 onChange={handleChange}
                                 required
-                            />
+                            >
+                                <option value="">Selecione...</option>
+                                {Object.keys(typeLabels).map(type => (
+                                    <option key={type} value={type}>{typeLabels[type]}</option>
+                                ))}
+                            </select>
                             {errors.machineType && <span className="error-message">{errors.machineType}</span>}
                         </div>
+                        <div className="form-group">
+                            <label>Nome Identificador *</label>
+                            <input
+                                type="text"
+                                name="name"
+                                className={`form-input ${errors.name ? 'input-error' : ''}`}
+                                placeholder="Ex: Laser 01, Dobradeira Sul"
+                                value={formData.name}
+                                onChange={handleChange}
+                                required
+                            />
+                            {errors.name && <span className="error-message">{errors.name}</span>}
+                        </div>
+                    </div>
+
+                    <div className="form-row">
                         <div className="form-group">
                             <label>Modelo *</label>
                             <input
                                 type="text"
                                 name="model"
                                 className={`form-input ${errors.model ? 'input-error' : ''}`}
-                                placeholder="Ex: Split 24000 BTUs"
+                                placeholder="Ex: TruLaser 3030"
                                 value={formData.model}
                                 onChange={handleChange}
                                 required
                             />
                             {errors.model && <span className="error-message">{errors.model}</span>}
                         </div>
-                    </div>
-
-                    <div className="form-row">
                         <div className="form-group">
-                            <label>Marca</label>
+                            <label>Número de Série *</label>
                             <input
                                 type="text"
-                                name="brand"
-                                className="form-input"
-                                placeholder="Ex: Samsung, LG..."
-                                value={formData.brand}
+                                name="serialNumber"
+                                className={`form-input ${errors.serialNumber ? 'input-error' : ''}`}
+                                placeholder="S/N"
+                                value={formData.serialNumber}
                                 onChange={handleChange}
+                                required
                             />
-                        </div>
-                        <div className="form-group">
-                            <label>Descrição</label>
-                            <input
-                                type="text"
-                                name="description"
-                                className="form-input"
-                                placeholder="Informações técnicas adicionais"
-                                value={formData.description}
-                                onChange={handleChange}
-                            />
+                            {errors.serialNumber && <span className="error-message">{errors.serialNumber}</span>}
                         </div>
                     </div>
 
                     <div className="form-row">
                         <div className="form-group">
-                            <label>Valor Hora Técnica (R$) *</label>
+                            <label>Preço de Instalação (R$) *</label>
                             <input
                                 type="number"
-                                name="hourlyRate"
-                                className="form-input"
-                                step="0.01"
-                                min="0"
+                                name="installationPrice"
+                                className={`form-input ${errors.installationPrice ? 'input-error' : ''}`}
                                 placeholder="0.00"
-                                value={formData.hourlyRate}
+                                step="0.01"
+                                value={formData.installationPrice}
                                 onChange={handleChange}
                                 required
                             />
+                            {errors.installationPrice && <span className="error-message">{errors.installationPrice}</span>}
                         </div>
-                        <div className="form-group">
-                            <label>Estimativa de Horas *</label>
-                            <input
-                                type="number"
-                                name="estimatedHours"
-                                className="form-input"
-                                step="0.5"
-                                min="0"
-                                placeholder="0"
-                                value={formData.estimatedHours}
-                                onChange={handleChange}
-                                required
-                            />
-                        </div>
+                        <div className="form-group" style={{ flex: 1 }}></div>
+                    </div>
+
+                    {selectedTypeFields.length > 0 && (
+                        <div className="form-section-title">Especificações Técnicas</div>
+                    )}
+
+                    <div className="form-grid-2">
+                        {selectedTypeFields.map(field => (
+                            <div className="form-group" key={field}>
+                                <label>{fieldLabels[field]}</label>
+                                {field === 'laserKind' ? (
+                                    <select
+                                        name={field}
+                                        className="form-input"
+                                        value={formData[field]}
+                                        onChange={handleChange}
+                                    >
+                                        <option value="">Selecione...</option>
+                                        <option value="ABERTA">Aberta</option>
+                                        <option value="FECHADA">Fechada</option>
+                                    </select>
+                                ) : (
+                                    <input
+                                        type={field === 'laserPower' || field === 'tonnage' || field === 'force' || field === 'diameter' || field === 'rollerCount' ? 'number' : 'text'}
+                                        name={field}
+                                        className="form-input"
+                                        step="0.01"
+                                        value={formData[field]}
+                                        onChange={handleChange}
+                                    />
+                                )}
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="form-group" style={{ marginTop: '1rem' }}>
+                        <label>Descrição</label>
+                        <textarea
+                            name="description"
+                            className="form-input"
+                            rows="2"
+                            placeholder="Informações adicionais..."
+                            value={formData.description}
+                            onChange={handleChange}
+                        ></textarea>
                     </div>
 
                     <div className="modal-actions">

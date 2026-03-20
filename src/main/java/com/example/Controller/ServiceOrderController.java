@@ -3,12 +3,18 @@ package com.example.Controller;
 import com.example.DTOs.ServiceOrderRequestDTO;
 import com.example.DTOs.ServiceOrderResponseDTO;
 import com.example.DTOs.ServiceOrderSuggestionDTO;
+import com.example.Models.Usuario;
+import com.example.Service.ReportService;
 import com.example.Service.ServiceOrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -20,6 +26,7 @@ import java.util.Map;
 public class ServiceOrderController {
 
     private final ServiceOrderService serviceOrderService;
+    private final ReportService reportService;
 
     // Endpoint de sugestões automáticas — retorna dados calculados quando uma máquina é selecionada
     @GetMapping("/suggestions")
@@ -57,10 +64,17 @@ public class ServiceOrderController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('PROPRIETARIO')")
+    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'TECNICO')")
     public ResponseEntity<ServiceOrderResponseDTO> createServiceOrder(@Valid @RequestBody ServiceOrderRequestDTO dto) {
         ServiceOrderResponseDTO response = serviceOrderService.createServiceOrder(dto);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    // Endpoint de preview para frontend "magro" — calcula valores sem salvar
+    @PostMapping("/preview")
+    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'TECNICO')")
+    public ResponseEntity<ServiceOrderResponseDTO> previewServiceOrder(@RequestBody ServiceOrderRequestDTO dto) {
+        return ResponseEntity.ok(serviceOrderService.calculatePreview(dto));
     }
 
     @PutMapping("/{id}")
@@ -79,10 +93,50 @@ public class ServiceOrderController {
         return ResponseEntity.ok(serviceOrderService.updateStatus(id, newStatus));
     }
 
+    @PutMapping("/{id}/description")
+    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'TECNICO')")
+    public ResponseEntity<ServiceOrderResponseDTO> updateDescription(
+            @PathVariable(name = "id") Long id, @RequestBody Map<String, String> body) {
+        String description = body.get("serviceDescription");
+        return ResponseEntity.ok(serviceOrderService.updateServiceDescription(id, description));
+    }
+
+    @PutMapping("/{id}/displacement")
+    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'TECNICO')")
+    public ResponseEntity<ServiceOrderResponseDTO> updateDisplacement(
+            @PathVariable(name = "id") Long id, @RequestBody Map<String, Double> body) {
+        Double displacementKm = body.get("displacementKm");
+        return ResponseEntity.ok(serviceOrderService.updateDisplacement(id, displacementKm));
+    }
+
     // Endpoint para técnico marcar pagamento como recebido (ação irreversível)
     @PutMapping("/{id}/mark-received")
     @PreAuthorize("hasAuthority('TECNICO')")
     public ResponseEntity<ServiceOrderResponseDTO> markAsReceived(@PathVariable(name = "id") Long id) {
         return ResponseEntity.ok(serviceOrderService.markAsReceived(id));
+    }
+
+    @GetMapping("/{id}/report")
+    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO', 'TECNICO')")
+    public ResponseEntity<byte[]> downloadReport(@PathVariable(name = "id") Long id) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario currentUser = (Usuario) auth.getPrincipal();
+        
+        // Busca a OS real (não o DTO) para gerar o relatório
+        com.example.Models.ServiceOrder order = serviceOrderService.findById(id);
+        
+        // TECNICO só pode baixar relatório de suas próprias OSs
+        if ("TECNICO".equals(currentUser.getRole()) && !order.getTechnician().getId().equals(currentUser.getId())) {
+            return ResponseEntity.status(403).build();
+        }
+
+        byte[] pdf = reportService.generateServiceOrderReport(order, currentUser.getRole());
+
+        String filename = "OS_" + id + "_Relatorio.pdf";
+        
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
     }
 }

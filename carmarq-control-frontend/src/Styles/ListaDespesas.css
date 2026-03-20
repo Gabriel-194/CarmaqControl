@@ -1,0 +1,30 @@
+.lista-despesas-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.despesa-form-card {
+    background-color: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+}
+
+.despesa-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+    .despesa-row {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .despesa-row .form-group {
+        width: 100% !important;
+    }
+}

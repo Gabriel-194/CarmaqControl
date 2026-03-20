@@ -35,6 +35,12 @@ public class ClientRequestDTO {
     @Size(max = 255, message = "Endereço excede limite de 255 caracteres")
     private String address;
 
+    @Size(max = 20, message = "CNPJ muito longo")
+    private String cnpj;
+
+    @Size(max = 30, message = "IE muito longo")
+    private String ie;
+
     private Double latitude;
 
     private Double longitude;

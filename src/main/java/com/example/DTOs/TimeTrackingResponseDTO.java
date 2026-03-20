@@ -17,6 +17,7 @@ public class TimeTrackingResponseDTO {
     private Long id;
     private Long serviceOrderId;
     private String type;
+    private java.time.LocalDate registeredDate;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private String description;

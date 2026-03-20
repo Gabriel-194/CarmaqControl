@@ -94,7 +94,7 @@ export function ProprietarioDashboard() {
                     </div>
                     <span className="stat-value" style={{ color: '#10b981' }}>{formatCurrency(stats.totalRevenue)}</span>
                     <span className="stat-desc">
-                        Bruto (Serviços + Peças + Deslocamento)
+                        Bruto (Serviços + Peças + Despesas)
                     </span>
                 </div>
 
@@ -105,7 +105,7 @@ export function ProprietarioDashboard() {
                     </div>
                     <span className="stat-value" style={{ color: '#ef4444' }}>- {formatCurrency(stats.totalExpenses)}</span>
                     <span className="stat-desc">
-                        10% de Mão de Obra + Deslocamento
+                        10% de Mão de Obra + 100% Despesas
                     </span>
                 </div>
 

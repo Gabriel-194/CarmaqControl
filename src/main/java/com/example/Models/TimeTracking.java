@@ -27,9 +27,13 @@ public class TimeTracking {
     @JoinColumn(name = "service_order_id", nullable = false)
     private ServiceOrder serviceOrder;
 
-    // Tipo do registro de tempo (SAIDA_SEDE, CHEGADA_CLIENTE, TRABALHO, RETORNO_SEDE)
+    // Tipo do registro de tempo (SAIDA_SEDE, TRABALHO, RETORNO_SEDE)
     @Column(nullable = false, length = 30)
     private String type;
+
+    // Data especifica do trabalho (evita confusões de DateTime)
+    @Column(name = "registered_date", nullable = false)
+    private java.time.LocalDate registeredDate;
 
     // Hora de início
     @Column(name = "start_time", nullable = false)
