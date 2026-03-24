@@ -50,9 +50,11 @@ public class ServiceOrderRequestDTO {
     // Origem se for Manutencao
     private String manutencaoOrigin;
 
-    // Km de deslocamento informados pelo tecnico
-    private Double displacementKm;
+
 
     // Valor do serviço (mão de obra) definido manualmente (Proprietário) ou calculado (Manutenção)
     private Double serviceValue;
+
+    // Valor de desconto opcional na ordem de serviço
+    private Double discountValue;
 }

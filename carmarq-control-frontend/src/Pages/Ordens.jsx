@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Sidebar from '../Components/Sidebar'
 import { useAuth } from '../contexts/AuthContext'
-import { Search, Filter, Plus, Loader2, ClipboardList } from 'lucide-react'
+import { Search, Filter, Plus, Loader2, ClipboardList, Download } from 'lucide-react'
 import axios from 'axios'
+import { statusMap } from '../utils/statusUtils'
 import '../Styles/Ordens.css'
 
 const API_URL = 'http://localhost:8080/api/service-orders'
@@ -53,18 +54,36 @@ export default function Ordens() {
 
     const filtered = ordens
 
-    // Mapeia status para label e classe CSS
-    const statusMap = {
-        'ABERTA': { label: 'Aberta', css: 'status-aberto' },
-        'EM_ANDAMENTO': { label: 'Em Andamento', css: 'status-em-andamento' },
-        'CONCLUIDA': { label: 'Concluída', css: 'status-concluido' },
-        'CANCELADA': { label: 'Cancelada', css: 'status-cancelada' },
-        'REQUER_INSPECAO': { label: 'Requer Inspeção', css: 'status-inspecao' }
-    }
+
 
     const formatDate = (dateStr) => {
         if (!dateStr) return '—'
         return new Date(dateStr).toLocaleDateString('pt-BR')
+    }
+
+    const handleExportExcel = async () => {
+        try {
+            const params = {
+                search: searchTerm || undefined,
+                status: statusFilter || undefined,
+                month: month || undefined,
+                year: year || undefined
+            }
+            const response = await axios.get(`${API_URL}/export-excel`, {
+                params,
+                responseType: 'blob',
+                withCredentials: true
+            })
+            const url = window.URL.createObjectURL(new Blob([response.data]))
+            const link = document.createElement('a')
+            link.href = url
+            link.setAttribute('download', 'Relatorio_Ordens_de_Servico.xlsx')
+            document.body.appendChild(link)
+            link.click()
+            link.remove()
+        } catch (error) {
+            console.error('Erro ao exportar excel', error)
+        }
     }
 
     return (
@@ -99,6 +118,16 @@ export default function Ordens() {
                     </div>
                     
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        {(user?.role === 'PROPRIETARIO' || user?.role === 'FINANCEIRO') && (
+                            <button
+                                className="btn-secondary"
+                                onClick={handleExportExcel}
+                                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', height: '100%', padding: '0 1rem' }}
+                                title="Exportar Tabela de Ordens em Planilha Excel"
+                            >
+                                <Download size={18} /> Excel
+                            </button>
+                        )}
                         <select
                             className="btn-secondary"
                             value={statusFilter}
@@ -110,6 +139,7 @@ export default function Ordens() {
                             <option value="EM_ANDAMENTO">Em Andamento</option>
                             <option value="CONCLUIDA">Concluída</option>
                             <option value="CANCELADA">Cancelada</option>
+                            <option value="COM_PROBLEMA">Com Problema</option>
                             <option value="REQUER_INSPECAO">Requer Inspeção</option>
                         </select>
 

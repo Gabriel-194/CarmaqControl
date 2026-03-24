@@ -21,6 +21,7 @@ public class DashboardStatsDTO {
     private Long completedOrders;
     private Long cancelledOrders;
     private Long requiresInspectionOrders;
+    private Long pendingApprovalPayments;
 
     // Métricas financeiras (somente para PROPRIETARIO e FINANCEIRO)
     private Double totalRevenue;

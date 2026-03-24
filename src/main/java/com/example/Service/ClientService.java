@@ -88,7 +88,8 @@ public class ClientService {
 
     @Transactional
     public void deleteClient(Long id) {
-        Client client = findClientByIdAndActive(id);
+        Client client = clientRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Cliente não encontrado com id " + id));
         client.setActive(false);
         clientRepository.save(client);
     }

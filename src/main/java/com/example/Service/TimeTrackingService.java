@@ -55,6 +55,10 @@ public class TimeTrackingService {
         ServiceOrder order = serviceOrderRepository.findById(serviceOrderId)
                 .orElseThrow(() -> new RuntimeException("Ordem de serviço não encontrada com id " + serviceOrderId));
 
+        if ("INSTALACAO".equals(order.getServiceType())) {
+            throw new RuntimeException("Não é permitido apontar horas para ordens de Instalação.");
+        }
+
         TimeTracking timeTracking = TimeTracking.builder()
                 .serviceOrder(order)
                 .type(dto.getType())
@@ -80,6 +84,10 @@ public class TimeTrackingService {
 
         validateOsOwnership(timeTracking.getServiceOrder().getId());
         validateMutationPermission();
+
+        if ("INSTALACAO".equals(timeTracking.getServiceOrder().getServiceType())) {
+            throw new RuntimeException("Não é permitido apontar horas para ordens de Instalação.");
+        }
 
         if (dto.getRegisteredDate() != null) {
             timeTracking.setRegisteredDate(dto.getRegisteredDate());

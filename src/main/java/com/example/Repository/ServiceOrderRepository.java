@@ -47,6 +47,22 @@ public interface ServiceOrderRepository extends JpaRepository<ServiceOrder, Long
 
     @EntityGraph(attributePaths = {"client", "machine", "technician"})
     @Query("SELECT so FROM ServiceOrder so WHERE " +
+           "(:status IS NULL OR so.status = :status) AND " +
+           "(:year IS NULL OR (so.openedAt IS NOT NULL AND EXTRACT(YEAR FROM so.openedAt) = :year)) AND " +
+           "(:month IS NULL OR (so.openedAt IS NOT NULL AND EXTRACT(MONTH FROM so.openedAt) = :month)) AND " +
+           "(:search IS NULL OR LOWER(so.client.companyName) LIKE LOWER(CAST(CONCAT('%', :search, '%') AS string)) OR " +
+           "LOWER(so.numeroChamado) LIKE LOWER(CAST(CONCAT('%', :search, '%') AS string)) OR " +
+           "LOWER(so.technician.nome) LIKE LOWER(CAST(CONCAT('%', :search, '%') AS string)) OR " +
+           "CAST(so.id AS string) LIKE CAST(CONCAT('%', :search, '%') AS string)) " + 
+           "ORDER BY so.createdAt DESC")
+    List<ServiceOrder> findWithFiltersUnpaginated(
+            @Param("search") String search,
+            @Param("status") String status,
+            @Param("month") Integer month,
+            @Param("year") Integer year);
+
+    @EntityGraph(attributePaths = {"client", "machine", "technician"})
+    @Query("SELECT so FROM ServiceOrder so WHERE " +
            "so.technician.id = :techId AND " +
            "(:status IS NULL OR so.status = :status) AND " +
            "(:year IS NULL OR (so.openedAt IS NOT NULL AND EXTRACT(YEAR FROM so.openedAt) = :year)) AND " +
@@ -70,6 +86,9 @@ public interface ServiceOrderRepository extends JpaRepository<ServiceOrder, Long
 
     // Contagem total de OS
     long count();
+
+    @Query("SELECT COUNT(so) FROM ServiceOrder so WHERE so.technicianPaymentStatus = 'PENDENTE_APROVACAO'")
+    long countPendingApprovalPayments();
 
     // Soma de valores totais (para receita)
     @Query("SELECT COALESCE(SUM(COALESCE(so.serviceValue, 0.0) + COALESCE(so.expensesValue, 0.0) + COALESCE(so.partsValue, 0.0)), 0.0) FROM ServiceOrder so WHERE so.status = 'CONCLUIDA'")
@@ -99,6 +118,9 @@ public interface ServiceOrderRepository extends JpaRepository<ServiceOrder, Long
     @Query("SELECT COALESCE(SUM(COALESCE(so.serviceValue, 0.0) + COALESCE(so.expensesValue, 0.0) + COALESCE(so.partsValue, 0.0)), 0.0) FROM ServiceOrder so WHERE so.status = 'CONCLUIDA' AND (so.closedAt IS NOT NULL AND EXTRACT(MONTH FROM so.closedAt) = :month AND EXTRACT(YEAR FROM so.closedAt) = :year)")
     Double sumTotalValueByMonthAndYear(@Param("month") int month, @Param("year") int year);
 
+    @Query("SELECT COUNT(so) FROM ServiceOrder so WHERE so.technicianPaymentStatus = 'PENDENTE_APROVACAO' AND (so.closedAt IS NOT NULL AND EXTRACT(MONTH FROM so.closedAt) = :month AND EXTRACT(YEAR FROM so.closedAt) = :year)")
+    long countPendingApprovalPaymentsByMonthAndYear(@Param("month") int month, @Param("year") int year);
+
     @Query("SELECT COALESCE(SUM((COALESCE(so.serviceValue, 0.0) * 0.1) + COALESCE(so.expensesValue, 0.0)), 0.0) FROM ServiceOrder so WHERE so.status = 'CONCLUIDA' AND (so.closedAt IS NOT NULL AND EXTRACT(MONTH FROM so.closedAt) = :month AND EXTRACT(YEAR FROM so.closedAt) = :year)")
     Double sumTechnicianPaymentByMonthAndYear(@Param("month") int month, @Param("year") int year);
 
@@ -114,6 +136,9 @@ public interface ServiceOrderRepository extends JpaRepository<ServiceOrder, Long
     // Queries para Filtro Anual (Todos os meses)
     @Query("SELECT COALESCE(SUM(COALESCE(so.serviceValue, 0.0) + COALESCE(so.expensesValue, 0.0) + COALESCE(so.partsValue, 0.0)), 0.0) FROM ServiceOrder so WHERE so.status = 'CONCLUIDA' AND (so.closedAt IS NOT NULL AND EXTRACT(YEAR FROM so.closedAt) = :year)")
     Double sumTotalValueByYear(@Param("year") int year);
+
+    @Query("SELECT COUNT(so) FROM ServiceOrder so WHERE so.technicianPaymentStatus = 'PENDENTE_APROVACAO' AND (so.closedAt IS NOT NULL AND EXTRACT(YEAR FROM so.closedAt) = :year)")
+    long countPendingApprovalPaymentsByYear(@Param("year") int year);
 
     @Query("SELECT COALESCE(SUM((COALESCE(so.serviceValue, 0.0) * 0.1) + COALESCE(so.expensesValue, 0.0)), 0.0) FROM ServiceOrder so WHERE so.status = 'CONCLUIDA'")
     Double sumTotalTechnicianPaymentCompleted();

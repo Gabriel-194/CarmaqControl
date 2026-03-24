@@ -128,6 +128,12 @@ public class ServiceExpenseService {
             case PEDAGIO: label = "Pedágio"; break;
             case ALIMENTACAO: label = "Alimentação"; break;
             case HOSPEDAGEM: label = "Hospedagem"; break;
+            case PASSAGEM_AEREA: label = "Passagem Aérea"; break;
+            case TAXI: label = "Táxi"; break;
+            case COMBUSTIVEL: label = "Combustível"; break;
+            case ESTACIONAMENTO: label = "Estacionamento"; break;
+            case ALUGUEL_CARRO: label = "Aluguel de Carro"; break;
+            case MATERIAL: label = "Material"; break;
             case OUTRO: label = "Outro"; break;
             default: label = "Desconhecido";
         }

@@ -7,7 +7,7 @@ import '../Styles/ListaPecas.css'
 const API_URL = 'http://localhost:8080/api/service-orders'
 
 // Componente de peças integrado com API real — recebe serviceOrderId e orderStatus como prop
-export default function ListaPecas({ serviceOrderId, orderStatus }) {
+export default function ListaPecas({ serviceOrderId, orderStatus, onUpdate }) {
     const [pecas, setPecas] = useState([])
     const [loading, setLoading] = useState(true)
     const [nomePeca, setNomePeca] = useState('')
@@ -50,6 +50,7 @@ export default function ListaPecas({ serviceOrderId, orderStatus }) {
             setQtd(1)
             setValorUnitario('')
             fetchParts()
+            if (onUpdate) onUpdate()
         } catch (error) {
             toast('Erro ao adicionar peça.', 'error')
         }
@@ -61,6 +62,7 @@ export default function ListaPecas({ serviceOrderId, orderStatus }) {
             await axios.delete(`${API_URL}/${serviceOrderId}/parts/${partId}`, { withCredentials: true })
             toast('Peça removida.', 'success')
             fetchParts()
+            if (onUpdate) onUpdate()
         } catch (error) {
             toast('Erro ao remover peça.', 'error')
         }

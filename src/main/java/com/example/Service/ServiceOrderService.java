@@ -2,8 +2,8 @@ package com.example.Service;
 
 import com.example.DTOs.ServiceOrderRequestDTO;
 import com.example.DTOs.ServiceOrderResponseDTO;
-import com.example.DTOs.ServiceOrderSuggestionDTO;
-import com.example.Domain.MachineTypeEnum;
+
+
 import com.example.Models.*;
 import com.example.Repository.*;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 // Serviço principal para Ordens de Serviço — contém regras de negócio e filtragem por role
@@ -30,6 +29,18 @@ public class ServiceOrderService {
     private final ServicePartRepository servicePartRepository;
     private final ServiceExpenseRepository serviceExpenseRepository;
     private final TravelCalculationService travelCalculationService;
+
+    @Transactional(readOnly = true)
+    public List<ServiceOrder> getOrdersForExcel(String search, String status, Integer month, Integer year) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario currentUser = (Usuario) auth.getPrincipal();
+
+        if ("TECNICO".equals(currentUser.getRole())) {
+            throw new RuntimeException("Acesso negado: Técnicos não podem exportar relatórios financeiros.");
+        }
+
+        return serviceOrderRepository.findWithFiltersUnpaginated(search, status, month, year);
+    }
 
     // Retorna OS filtrando por role do usuário logado e aplicando filtros de busca/data
     @Transactional(readOnly = true)
@@ -120,10 +131,10 @@ public class ServiceOrderService {
                 .serviceType(dto.getServiceType())
                 .numeroChamado(dto.getNumeroChamado())
                 .manutencaoOrigin(dto.getManutencaoOrigin())
-                .displacementKm(dto.getDisplacementKm() != null ? dto.getDisplacementKm() : 0.0)
                 .serviceValue(serviceValue)
                 .partsValue(0.0)
                 .expensesValue(0.0)
+                .discountValue(dto.getDiscountValue() != null ? dto.getDiscountValue() : 0.0)
                 .technicianPaymentStatus("A_RECEBER")
                 .build();
 
@@ -137,6 +148,7 @@ public class ServiceOrderService {
         // Mapeia DTO para entidade temporária (sem ID)
         ServiceOrder tempOrder = ServiceOrder.builder()
                 .serviceValue(dto.getServiceValue() != null ? dto.getServiceValue() : 0.0)
+                .discountValue(dto.getDiscountValue() != null ? dto.getDiscountValue() : 0.0)
                 .expensesValue(0.0)
                 .partsValue(0.0) // No preview de criação, peças começam em zero
                 .build();
@@ -170,15 +182,16 @@ public class ServiceOrderService {
         if (dto.getManutencaoOrigin() != null) {
             order.setManutencaoOrigin(dto.getManutencaoOrigin());
         }
-        if (dto.getDisplacementKm() != null) {
-            order.setDisplacementKm(dto.getDisplacementKm());
-        }
         
         // Bloquear edição direta do ServiceValue se for manutenção
         if ("MANUTENCAO".equals(order.getServiceType())) {
             // ServiceValue é governado pelas horas registradas.
         } else if (dto.getServiceValue() != null) {
             order.setServiceValue(dto.getServiceValue());
+        }
+        
+        if (dto.getDiscountValue() != null) {
+            order.setDiscountValue(dto.getDiscountValue());
         }
 
         // Atualiza o valor das peças (cacheado na entidade)
@@ -188,28 +201,46 @@ public class ServiceOrderService {
         return mapToDTO(order, "PROPRIETARIO");
     }
 
-    // Marca o pagamento do técnico como RECEBIDO (ação irreversível)
+    // Aprova o pagamento e transfere para o técnico
     @Transactional
-    public ServiceOrderResponseDTO markAsReceived(Long orderId) {
+    public ServiceOrderResponseDTO approvePayment(Long orderId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Usuario currentUser = (Usuario) auth.getPrincipal();
 
         ServiceOrder order = serviceOrderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Ordem de serviço não encontrada com id " + orderId));
 
-        // Verifica se o usuário atual é o técnico desta OS
-        if (!order.getTechnician().getId().equals(currentUser.getId())) {
-            throw new RuntimeException("Acesso negado: esta OS não está atribuída a você");
+        if ("TECNICO".equals(currentUser.getRole())) {
+            throw new RuntimeException("Acesso negado: apenas o Financeiro ou Proprietário podem aprovar o pagamento.");
         }
 
-        // Verifica se já foi marcado como RECEBIDO (ação irreversível)
         if ("RECEBIDO".equals(order.getTechnicianPaymentStatus())) {
-            throw new RuntimeException("Este pagamento já foi marcado como recebido e não pode ser alterado");
+            throw new RuntimeException("Este pagamento já foi aprovado e repassado");
         }
 
         order.setTechnicianPaymentStatus("RECEBIDO");
+        order.setRejectionReason(null);
         order = serviceOrderRepository.save(order);
-        return mapToDTO(order, "TECNICO");
+        return mapToDTO(order, currentUser.getRole());
+    }
+
+    // Rejeita o repasse ao técnico com motivo
+    @Transactional
+    public ServiceOrderResponseDTO rejectPayment(Long orderId, String reason) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario currentUser = (Usuario) auth.getPrincipal();
+
+        ServiceOrder order = serviceOrderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Ordem de serviço não encontrada com id " + orderId));
+
+        if ("TECNICO".equals(currentUser.getRole())) {
+            throw new RuntimeException("Acesso negado.");
+        }
+
+        order.setTechnicianPaymentStatus("REJEITADO");
+        order.setRejectionReason(reason);
+        order = serviceOrderRepository.save(order);
+        return mapToDTO(order, currentUser.getRole());
     }
 
     @Transactional
@@ -226,19 +257,6 @@ public class ServiceOrderService {
         return mapToDTO(order, currentUser.getRole());
     }
 
-    @Transactional
-    public ServiceOrderResponseDTO updateDisplacement(Long id, Double displacementKm) {
-        ServiceOrder order = serviceOrderRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ordem de serviço não encontrada com id " + id));
-
-        order.setDisplacementKm(displacementKm != null ? displacementKm : 0.0);
-        order = serviceOrderRepository.save(order);
-        
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Usuario currentUser = (Usuario) auth.getPrincipal();
-        
-        return mapToDTO(order, currentUser.getRole());
-    }
 
     @Transactional
     public ServiceOrderResponseDTO updateStatus(Long id, String newStatus) {
@@ -257,9 +275,12 @@ public class ServiceOrderService {
 
         order.setStatus(newStatus);
 
-        // Se concluída, registra data de fechamento
+        // Se concluída, registra data de fechamento e joga pagamento para pendente aprovação
         if ("CONCLUIDA".equals(newStatus)) {
             order.setClosedAt(LocalDateTime.now());
+            if ("A_RECEBER".equals(order.getTechnicianPaymentStatus())) {
+                order.setTechnicianPaymentStatus("PENDENTE_APROVACAO");
+            }
         }
 
         order = serviceOrderRepository.save(order);
@@ -283,91 +304,53 @@ public class ServiceOrderService {
     // Calcula as horas da Tabela de Tempo e reformula o valor do Serviço
     public void refreshLaborValue(ServiceOrder order, List<TimeTracking> times) {
         if ("MANUTENCAO".equals(order.getServiceType())) {
-            double rate = 250.0; // CARMARQ
+            double rateTrabalho = 250.0; // CARMARQ
             if ("VALENTIM".equals(order.getManutencaoOrigin())) {
-                rate = 185.0;
+                rateTrabalho = 185.0;
             }
+            double rateDeslocamento = 85.0; // Valor fixo para Hora Deslocamento
             
-            long totalMinutes = 0;
+            long trabalhoMinutes = 0;
+            long deslocamentoMinutes = 0;
+
             for (TimeTracking tt : times) {
-                 if ("TRABALHO".equals(tt.getType()) && tt.getStartTime() != null && tt.getEndTime() != null) {
-                     totalMinutes += java.time.Duration.between(tt.getStartTime(), tt.getEndTime()).toMinutes();
+                 if (tt.getStartTime() != null && tt.getEndTime() != null) {
+                     long mins = java.time.Duration.between(tt.getStartTime(), tt.getEndTime()).toMinutes();
+                     if ("TRABALHO".equals(tt.getType())) {
+                         trabalhoMinutes += mins;
+                     } else {
+                         // Qualquer outro tipo de tempo é considerado deslocamento
+                         deslocamentoMinutes += mins;
+                     }
                  }
             }
             
-            double hours = totalMinutes / 60.0;
-            order.setServiceValue(Math.round((hours * rate) * 100.0) / 100.0);
+            double hrsTrabalho = trabalhoMinutes / 60.0;
+            double hrsDeslocamento = deslocamentoMinutes / 60.0;
+            
+            double totalLabor = (hrsTrabalho * rateTrabalho) + (hrsDeslocamento * rateDeslocamento);
+            order.setServiceValue(Math.round(totalLabor * 100.0) / 100.0);
             serviceOrderRepository.save(order);
         }
     }
 
     // Cálculos Dinâmicos (Não persistidos)
     public Double calculateTotal(ServiceOrder order) {
-        Double displacementValue = (order.getDisplacementKm() != null ? order.getDisplacementKm() * 2.20 : 0.0);
+        Double discount = (order.getDiscountValue() != null ? order.getDiscountValue() : 0.0);
         return (order.getServiceValue() != null ? order.getServiceValue() : 0.0) +
                (order.getPartsValue() != null ? order.getPartsValue() : 0.0) +
-               (order.getExpensesValue() != null ? order.getExpensesValue() : 0.0) +
-               displacementValue;
+               (order.getExpensesValue() != null ? order.getExpensesValue() : 0.0) - discount;
     }
 
     public Double calculateTechnicianPayment(ServiceOrder order) {
         Double serviceBase = (order.getServiceValue() != null ? order.getServiceValue() : 0.0);
         Double expenses = (order.getExpensesValue() != null ? order.getExpensesValue() : 0.0);
-        Double displacementValue = (order.getDisplacementKm() != null ? order.getDisplacementKm() * 2.20 : 0.0);
         
-        // Se for manutenção, o técnico recebe o valor nominal integral (pois é precificado por hora) + deslocamento
-        if ("MANUTENCAO".equals(order.getServiceType())) {
-            return serviceBase + displacementValue + expenses;
-        }
-        
-        // Se for instalação, o técnico recebe 10% da Mão de Obra + deslocamento + despesas inteiras
-        return (serviceBase * 0.10) + displacementValue + expenses;
+        // Pagamento do técnico: 10% da Mão de Obra + 100% das Despesas (para todos os tipos de serviço)
+        return (serviceBase * 0.10) + expenses;
     }
 
-    // Gera sugestões simplificadas baseadas na máquina selecionada
-    @Transactional(readOnly = true)
-    public ServiceOrderSuggestionDTO generateSuggestions(Long machineId) {
-        Machine machine = machineRepository.findById(machineId)
-                .orElseThrow(() -> new RuntimeException("Máquina não encontrada com id " + machineId));
 
-        // Sugestão de tipo de serviço baseada no tipo da máquina
-        String machineTypeStr = machine.getMachineType() != null ? machine.getMachineType().name() : "Desconhecido";
-        String suggestedService = "Manutenção " + machineTypeStr;
-
-        // Peças comuns sugeridas (simplificadas para o novo modelo)
-        List<String> suggestedParts = new ArrayList<>();
-        if (machine.getMachineType() == MachineTypeEnum.LASER || machine.getMachineType() == MachineTypeEnum.GRAVADORA_LASER) {
-            suggestedParts.add("Lente de foco");
-            suggestedParts.add("Bico de corte");
-            suggestedParts.add("Espelho refletor");
-        } else if (machine.getMachineType() == MachineTypeEnum.DOBRADEIRA || machine.getMachineType() == MachineTypeEnum.GUILHOTINA) {
-            suggestedParts.add("Óleo hidráulico");
-            suggestedParts.add("Filtro de óleo");
-        }
-
-        // Observação automática (sem valores financeiros)
-        String autoObs = String.format(
-                "Serviço para máquina: %s | Tipo: %s | Modelo: %s | S/N: %s",
-                machine.getName(),
-                machineTypeStr,
-                machine.getModel(),
-                machine.getSerialNumber()
-        );
-
-        return ServiceOrderSuggestionDTO.builder()
-                .suggestedServiceType(suggestedService)
-                .estimatedServiceValue(0.0) // Não há mais estimativa automática por máquina
-                .estimatedHours(0.0)
-                .hourlyRate(0.0)
-                .machineType(machineTypeStr)
-                .machineModel(machine.getModel())
-                .machineBrand(null) // Removido do modelo
-                .machineDescription(machine.getDescription())
-                .suggestedParts(suggestedParts)
-                .autoObservation(autoObs)
-                .estimatedTechnicianPayment(0.0)
-                .build();
-    }
 
     // Mapeamento para DTO filtrando por role
     private ServiceOrderResponseDTO mapToDTO(ServiceOrder order, String role) {
@@ -388,9 +371,9 @@ public class ServiceOrderService {
                 .observations(order.getObservations())
                 .serviceType(order.getServiceType())
                 .technicianPaymentStatus(order.getTechnicianPaymentStatus())
+                .rejectionReason(order.getRejectionReason())
                 .manutencaoOrigin(order.getManutencaoOrigin())
                 .numeroChamado(order.getNumeroChamado())
-                .displacementKm(order.getDisplacementKm())
                 .openedAt(order.getOpenedAt())
                 .closedAt(order.getClosedAt());
 
@@ -407,6 +390,7 @@ public class ServiceOrderService {
             builder.serviceValue(order.getServiceValue())
                     .partsValue(order.getPartsValue())
                     .expensesValue(order.getExpensesValue())
+                    .discountValue(order.getDiscountValue())
                     .totalValue(totalValue)
                     .technicianPayment(techPayment)
                     .netProfit(totalValue - techPayment);

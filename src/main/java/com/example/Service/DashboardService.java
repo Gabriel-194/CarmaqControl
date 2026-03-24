@@ -87,7 +87,8 @@ public class DashboardService {
                 if (month != null) {
                     final int m = month;
                     builder.completedOrders(serviceOrderRepository.countByStatusAndMonthAndYear("CONCLUIDA", m, y))
-                            .cancelledOrders(serviceOrderRepository.countByStatusAndMonthAndYear("CANCELADA", m, y));
+                            .cancelledOrders(serviceOrderRepository.countByStatusAndMonthAndYear("CANCELADA", m, y))
+                            .pendingApprovalPayments(serviceOrderRepository.countPendingApprovalPaymentsByMonthAndYear(m, y));
 
                     builder.totalRevenue(serviceOrderRepository.sumTotalValueByMonthAndYear(m, y));
                     
@@ -99,7 +100,8 @@ public class DashboardService {
                 } else {
                     // "Todos os meses" do ano
                     builder.completedOrders(serviceOrderRepository.countByStatusAndYear("CONCLUIDA", y))
-                            .cancelledOrders(serviceOrderRepository.countByStatusAndYear("CANCELADA", y));
+                            .cancelledOrders(serviceOrderRepository.countByStatusAndYear("CANCELADA", y))
+                            .pendingApprovalPayments(serviceOrderRepository.countPendingApprovalPaymentsByYear(y));
 
                     builder.totalRevenue(serviceOrderRepository.sumTotalValueByYear(y));
                     
@@ -123,7 +125,8 @@ public class DashboardService {
                         .inProgressOrders(serviceOrderRepository.countByStatus("EM_ANDAMENTO"))
                         .completedOrders(serviceOrderRepository.countByStatus("CONCLUIDA"))
                         .cancelledOrders(serviceOrderRepository.countByStatus("CANCELADA"))
-                        .requiresInspectionOrders(serviceOrderRepository.countByStatus("REQUER_INSPECAO"));
+                        .requiresInspectionOrders(serviceOrderRepository.countByStatus("REQUER_INSPECAO"))
+                        .pendingApprovalPayments(serviceOrderRepository.countPendingApprovalPayments());
 
                 builder.totalRevenue(serviceOrderRepository.sumTotalValueCompleted());
                 builder.monthlyRevenue(serviceOrderRepository.sumTotalValueCurrentMonth());

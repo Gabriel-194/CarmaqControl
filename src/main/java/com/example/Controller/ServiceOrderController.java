@@ -2,8 +2,8 @@ package com.example.Controller;
 
 import com.example.DTOs.ServiceOrderRequestDTO;
 import com.example.DTOs.ServiceOrderResponseDTO;
-import com.example.DTOs.ServiceOrderSuggestionDTO;
 import com.example.Models.Usuario;
+import com.example.Service.ExcelExportService;
 import com.example.Service.ReportService;
 import com.example.Service.ServiceOrderService;
 import jakarta.validation.Valid;
@@ -18,6 +18,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.List;
 
 // Controller principal para Ordens de Serviço
 @RestController
@@ -27,13 +28,10 @@ public class ServiceOrderController {
 
     private final ServiceOrderService serviceOrderService;
     private final ReportService reportService;
+    private final ExcelExportService excelExportService;
+    private final com.example.Repository.ServiceExpenseRepository serviceExpenseRepository;
 
-    // Endpoint de sugestões automáticas — retorna dados calculados quando uma máquina é selecionada
-    @GetMapping("/suggestions")
-    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'TECNICO')")
-    public ResponseEntity<ServiceOrderSuggestionDTO> getSuggestions(@RequestParam(name = "machineId") Long machineId) {
-        return ResponseEntity.ok(serviceOrderService.generateSuggestions(machineId));
-    }
+
 
     @GetMapping
     @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO', 'TECNICO')")
@@ -101,19 +99,21 @@ public class ServiceOrderController {
         return ResponseEntity.ok(serviceOrderService.updateServiceDescription(id, description));
     }
 
-    @PutMapping("/{id}/displacement")
-    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'TECNICO')")
-    public ResponseEntity<ServiceOrderResponseDTO> updateDisplacement(
-            @PathVariable(name = "id") Long id, @RequestBody Map<String, Double> body) {
-        Double displacementKm = body.get("displacementKm");
-        return ResponseEntity.ok(serviceOrderService.updateDisplacement(id, displacementKm));
+
+    // Endpoint para financeiro aprovar o pagamento repassado ao técnico (ação irreversível)
+    @PutMapping("/{id}/approve-payment")
+    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO')")
+    public ResponseEntity<ServiceOrderResponseDTO> approvePayment(@PathVariable(name = "id") Long id) {
+        return ResponseEntity.ok(serviceOrderService.approvePayment(id));
     }
 
-    // Endpoint para técnico marcar pagamento como recebido (ação irreversível)
-    @PutMapping("/{id}/mark-received")
-    @PreAuthorize("hasAuthority('TECNICO')")
-    public ResponseEntity<ServiceOrderResponseDTO> markAsReceived(@PathVariable(name = "id") Long id) {
-        return ResponseEntity.ok(serviceOrderService.markAsReceived(id));
+    // Endpoint para financeiro rejeitar o repasse
+    @PutMapping("/{id}/reject-payment")
+    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO')")
+    public ResponseEntity<ServiceOrderResponseDTO> rejectPayment(
+            @PathVariable(name = "id") Long id, @RequestBody Map<String, String> body) {
+        String reason = body.get("reason");
+        return ResponseEntity.ok(serviceOrderService.rejectPayment(id, reason));
     }
 
     @GetMapping("/{id}/report")
@@ -138,5 +138,91 @@ public class ServiceOrderController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdf);
+    }
+
+    @GetMapping("/{id}/expense-report")
+    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO', 'TECNICO')")
+    public ResponseEntity<byte[]> downloadExpenseReport(@PathVariable(name = "id") Long id) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario currentUser = (Usuario) auth.getPrincipal();
+        
+        com.example.Models.ServiceOrder order = serviceOrderService.findById(id);
+        
+        if ("TECNICO".equals(currentUser.getRole()) && !order.getTechnician().getId().equals(currentUser.getId())) {
+            return ResponseEntity.status(403).build();
+        }
+
+        byte[] pdf = reportService.generateExpenseReport(order, currentUser.getRole());
+
+        String filename = "OS_" + id + "_Despesas.pdf";
+        
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
+
+    @GetMapping("/export-excel")
+    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO')")
+    public ResponseEntity<byte[]> exportExcel(
+            @RequestParam(name = "search", required = false) String search,
+            @RequestParam(name = "status", required = false) String status,
+            @RequestParam(name = "month", required = false) Integer month,
+            @RequestParam(name = "year", required = false) Integer year) throws java.io.IOException {
+        
+        java.util.List<com.example.Models.ServiceOrder> orders = serviceOrderService.getOrdersForExcel(search, status, month, year);
+        byte[] excel = excelExportService.exportServiceOrdersToExcel(orders);
+
+        String filename = "Relatorio_Ordens_de_Servico.xlsx";
+        
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excel);
+    }
+
+    @GetMapping("/{id}/export/instalacao-excel")
+    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO', 'TECNICO')")
+    public ResponseEntity<byte[]> exportInstalacaoExcel(@PathVariable(name = "id") Long id) throws java.io.IOException {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario currentUser = (Usuario) auth.getPrincipal();
+        
+        com.example.Models.ServiceOrder order = serviceOrderService.findById(id);
+        
+        if ("TECNICO".equals(currentUser.getRole()) && !order.getTechnician().getId().equals(currentUser.getId())) {
+            return ResponseEntity.status(403).build();
+        }
+
+        byte[] excel = excelExportService.generateInstalacaoExcel(order);
+
+        String filename = "OS_" + id + "_Entrega_Tecnica.xlsx";
+        
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excel);
+    }
+
+    @GetMapping("/{id}/export/despesas-excel")
+    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO', 'TECNICO')")
+    public ResponseEntity<byte[]> exportDespesasExcel(@PathVariable(name = "id") Long id) throws java.io.IOException {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario currentUser = (Usuario) auth.getPrincipal();
+        
+        com.example.Models.ServiceOrder order = serviceOrderService.findById(id);
+        
+        if ("TECNICO".equals(currentUser.getRole()) && !order.getTechnician().getId().equals(currentUser.getId())) {
+            return ResponseEntity.status(403).build();
+        }
+
+        List<com.example.Models.ServiceExpense> expenses = serviceExpenseRepository.findByServiceOrderId(id);
+        byte[] excel = excelExportService.generateDespesasExcel(order, expenses);
+
+        String filename = "OS_" + id + "_Relatorio_Despesas.xlsx";
+        
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excel);
     }
 }

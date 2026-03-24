@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { DollarSign, Users, ClipboardList, TrendingUp, Loader2, BarChart3 } from 'lucide-react'
 import axios from 'axios'
+import { statusMap } from '../../utils/statusUtils'
 import '../../Styles/Dashboards.css'
-
 const API_URL = 'http://localhost:8080/api/dashboard/stats'
 
 // Dashboard do Proprietário — métricas reais do sistema
@@ -37,14 +37,7 @@ export function ProprietarioDashboard() {
         return (val || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
     }
 
-    // Mapeia status para label e classe CSS (Padronizado)
-    const statusMap = {
-        'ABERTA': { label: 'Aberta', css: 'status-aberto' },
-        'EM_ANDAMENTO': { label: 'Em Andamento', css: 'status-em-andamento' },
-        'CONCLUIDA': { label: 'Concluída', css: 'status-concluido' },
-        'CANCELADA': { label: 'Cancelada', css: 'status-cancelada' },
-        'REQUER_INSPECAO': { label: 'Requer Inspeção', css: 'status-inspecao' }
-    }
+
 
     return (
         <div>

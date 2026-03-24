@@ -35,6 +35,17 @@ const fieldLabels = {
     rollerCount: 'Quantidade de Rolos',
 }
 
+const fieldPlaceholders = {
+    laserSize: 'Ex: 3000x1500mm',
+    laserPower: 'Ex: 3000',
+    machineSize: 'Ex: 3 metros',
+    tonnage: 'Ex: 100',
+    command: 'Ex: Delem DA-53T',
+    force: 'Ex: 50 kN',
+    diameter: 'Ex: 60',
+    rollerCount: 'Ex: 3',
+}
+
 export default function MachineModal({ machine, onClose, onSave, errors = {} }) {
     const [formData, setFormData] = useState({
         name: '',
@@ -215,6 +226,7 @@ export default function MachineModal({ machine, onClose, onSave, errors = {} }) 
                                         type={field === 'laserPower' || field === 'tonnage' || field === 'force' || field === 'diameter' || field === 'rollerCount' ? 'number' : 'text'}
                                         name={field}
                                         className="form-input"
+                                        placeholder={fieldPlaceholders[field] || ''}
                                         step="0.01"
                                         value={formData[field]}
                                         onChange={handleChange}

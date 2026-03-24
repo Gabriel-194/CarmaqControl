@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from './ui/Toaster';
 import { Trash2, Plus, Receipt, Loader2, DollarSign } from 'lucide-react';
+import { expenseTypeLabels } from '../utils/statusUtils';
 import '../Styles/ListaDespesas.css';
 
 const API_URL = 'http://localhost:8080/api/service-orders';
@@ -115,11 +116,9 @@ export default function ListaDespesas({ serviceOrderId, orderStatus, onUpdate })
                                     value={formData.expenseType}
                                     onChange={(e) => setFormData({...formData, expenseType: e.target.value})}
                                 >
-                                    <option value="DESLOCAMENTO_KM">Deslocamento (KM)</option>
-                                    <option value="PEDAGIO">Pedágio</option>
-                                    <option value="ALIMENTACAO">Alimentação</option>
-                                    <option value="HOSPEDAGEM">Hospedagem</option>
-                                    <option value="OUTRO">Outro</option>
+                                    {Object.entries(expenseTypeLabels).map(([key, label]) => (
+                                        <option key={key} value={key}>{label}</option>
+                                    ))}
                                 </select>
                             </div>
 

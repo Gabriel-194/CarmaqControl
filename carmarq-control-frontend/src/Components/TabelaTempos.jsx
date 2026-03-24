@@ -7,10 +7,11 @@ import '../Styles/TabelaTempos.css'
 const API_URL = 'http://localhost:8080/api/service-orders'
 
 // Componente de tempos integrado com API real
-export default function TabelaTempos({ serviceOrderId, userRole, osTipo }) {
+export default function TabelaTempos({ serviceOrderId, userRole, osTipo, onUpdate }) {
     const [registros, setRegistros] = useState([])
     const [loading, setLoading] = useState(true)
     const [isTimerRunning, setIsTimerRunning] = useState(false)
+    const [timerType, setTimerType] = useState('TRABALHO')
     const [showManual, setShowManual] = useState(false)
     const [isEditing, setIsEditing] = useState(false)
     const [editingId, setEditingId] = useState(null)
@@ -48,7 +49,7 @@ export default function TabelaTempos({ serviceOrderId, userRole, osTipo }) {
     const handleStartTimer = async () => {
         try {
             await axios.post(`${API_URL}/${serviceOrderId}/times`, {
-                type: 'TRABALHO',
+                type: timerType,
                 registeredDate: new Date().toISOString().split('T')[0],
                 startTime: new Date().toISOString(),
                 description: 'Atividade em andamento'
@@ -56,6 +57,7 @@ export default function TabelaTempos({ serviceOrderId, userRole, osTipo }) {
             setIsTimerRunning(true)
             toast('Cronômetro iniciado!', 'success')
             fetchTimes()
+            if (onUpdate) onUpdate()
         } catch (error) {
             toast('Erro ao iniciar cronômetro.', 'error')
         }
@@ -72,6 +74,7 @@ export default function TabelaTempos({ serviceOrderId, userRole, osTipo }) {
                 setIsTimerRunning(false)
                 toast('Atividade finalizada!', 'success')
                 fetchTimes()
+                if (onUpdate) onUpdate()
             } catch (error) {
                 toast('Erro ao parar cronômetro.', 'error')
             }
@@ -100,6 +103,7 @@ export default function TabelaTempos({ serviceOrderId, userRole, osTipo }) {
             await axios.delete(`${API_URL}/${serviceOrderId}/times/${id}`, { withCredentials: true })
             toast('Registro excluído com sucesso!', 'success')
             fetchTimes()
+            if (onUpdate) onUpdate()
         } catch (error) {
             toast('Erro ao excluir registro.', 'error')
         }
@@ -133,6 +137,7 @@ export default function TabelaTempos({ serviceOrderId, userRole, osTipo }) {
             setEditingId(null)
             setManualData({ type: 'TRABALHO', registeredDate: new Date().toISOString().split('T')[0], startTime: '', endTime: '', description: '' })
             fetchTimes()
+            if (onUpdate) onUpdate()
         } catch (error) {
             toast('Erro ao salvar tempo.', 'error')
         }
@@ -160,11 +165,23 @@ export default function TabelaTempos({ serviceOrderId, userRole, osTipo }) {
     return (
         <div className="times-container">
             {userRole === 'TECNICO' && (
-                <div className="timer-control">
+                <div className="timer-control" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                     {!isTimerRunning ? (
-                        <button className="btn-timer btn-start" onClick={handleStartTimer}>
-                            <Play size={20} /> Iniciar Cronômetro
-                        </button>
+                        <>
+                            <select 
+                                className="form-input" 
+                                style={{ width: 'auto', margin: 0 }}
+                                value={timerType}
+                                onChange={e => setTimerType(e.target.value)}
+                            >
+                                <option value="SAIDA_SEDE">Saída da Sede</option>
+                                <option value="TRABALHO">Trabalho</option>
+                                <option value="RETORNO_SEDE">Retorno à Sede</option>
+                            </select>
+                            <button className="btn-timer btn-start" onClick={handleStartTimer}>
+                                <Play size={20} /> Iniciar Cronômetro
+                            </button>
+                        </>
                     ) : (
                         <button className="btn-timer btn-stop" onClick={handleStopTimer}>
                             <Square size={20} /> Parar Atividade

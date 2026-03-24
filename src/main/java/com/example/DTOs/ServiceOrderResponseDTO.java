@@ -49,13 +49,13 @@ public class ServiceOrderResponseDTO {
     // Origem da Manutenção
     private String manutencaoOrigin;
 
-    // Km rodados para cobrança de deslocamento
-    private Double displacementKm;
+
 
     // Valores financeiros (podem ser null ou zero para TECNICO)
     private Double serviceValue;
     private Double partsValue;
     private Double expensesValue;
+    private Double discountValue;
     private Double totalValue;
 
     // Valor visível ao técnico
@@ -63,6 +63,9 @@ public class ServiceOrderResponseDTO {
 
     // Status do pagamento do técnico: A_RECEBER ou RECEBIDO
     private String technicianPaymentStatus;
+    
+    // Motivo da Rejeição do Pagamento
+    private String rejectionReason;
 
     // Lucro Líquido (Total - Pagamento Técnico)
     private Double netProfit;

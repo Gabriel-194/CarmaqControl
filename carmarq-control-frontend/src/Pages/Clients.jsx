@@ -15,8 +15,10 @@ const Clients = () => {
     const [modalOpen, setModalOpen] = useState(false);
     const [editingClient, setEditingClient] = useState(null);
     const [showInactive, setShowInactive] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
 
     const isOwner = user?.role === 'PROPRIETARIO';
+    const canAdd = user?.role === 'PROPRIETARIO' || user?.role === 'TECNICO';
 
     useEffect(() => {
         loadClients();
@@ -73,6 +75,12 @@ const Clients = () => {
         }
     };
 
+    const filteredClients = clients.filter(client => 
+        client.companyName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        client.contactName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        client.cnpj?.includes(searchTerm)
+    );
+
     return (
         <div className="dashboard-layout">
             <Sidebar />
@@ -80,11 +88,19 @@ const Clients = () => {
                 <div className="clients-page-header" style={{ width: '100%', gap: '20px' }}>
                     <h1 className="clients-page-title">Clientes</h1>
                     <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                        <input 
+                            type="text" 
+                            placeholder="Buscar razao social, contato ou CNPJ..." 
+                            className="form-input"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            style={{ margin: 0, padding: '0.4rem 0.8rem', width: '300px', borderRadius: '4px', border: '1px solid #ccc' }}
+                        />
                         <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '14px', color: '#666', cursor: 'pointer' }}>
                             <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} />
                             Ocultos/Inativos
                         </label>
-                        {isOwner && (
+                        {canAdd && (
                             <button onClick={() => handleOpenModal()} className="btn-primary">
                                 Novo Cliente
                             </button>
@@ -106,13 +122,13 @@ const Clients = () => {
                                     <th>Contatos Fixos</th>
                                     <th>Endereço e CEP</th>
                                     <th>Status</th>
-                                    {isOwner && (
+                                    {canAdd && (
                                         <th style={{ textAlign: 'right' }}>Ações</th>
                                     )}
                                 </tr>
                             </thead>
                             <tbody>
-                                {clients.map(client => (
+                                {filteredClients.map(client => (
                                     <tr key={client.id} style={{ opacity: client.active ? 1 : 0.6 }}>
                                         <td className="td-company">{client.companyName}</td>
                                         <td className="td-contact">{client.contactName}</td>
@@ -129,16 +145,16 @@ const Clients = () => {
                                                 {client.active ? 'Ativo' : 'Inativo'}
                                             </span>
                                         </td>
-                                        {isOwner && (
+                                        {canAdd && (
                                             <td>
                                                 <div className="action-buttons">
                                                     {client.active ? (
                                                         <>
                                                             <button onClick={() => handleOpenModal(client)} className="btn-edit">Editar</button>
-                                                            <button onClick={() => handleDelete(client.id)} className="btn-delete">Excluir</button>
+                                                            {isOwner && <button onClick={() => handleDelete(client.id)} className="btn-delete">Excluir</button>}
                                                         </>
                                                     ) : (
-                                                        <button onClick={() => handleReactivate(client.id)} className="btn-edit" style={{ color: 'var(--primary-color, #10b981)' }}>Reativar</button>
+                                                        isOwner && <button onClick={() => handleReactivate(client.id)} className="btn-edit" style={{ color: 'var(--primary-color, #10b981)' }}>Reativar</button>
                                                     )}
                                                 </div>
                                             </td>

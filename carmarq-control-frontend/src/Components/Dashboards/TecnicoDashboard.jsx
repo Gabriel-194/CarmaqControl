@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { ClipboardList, Clock, CheckCircle, Loader2, DollarSign, Wallet, Play, Check } from 'lucide-react'
 import axios from 'axios'
+import { statusMap } from '../../utils/statusUtils'
 import '../../Styles/Dashboards.css'
 import { toast } from '../ui/Toaster'
-
 const API_URL = 'http://localhost:8080/api/dashboard/stats'
 const OS_API_URL = 'http://localhost:8080/api/service-orders'
 
@@ -32,25 +32,9 @@ export function TecnicoDashboard() {
         fetchStats()
     }, [month, year])
 
-    const handleConfirmPayment = async (orderId) => {
-        if (!window.confirm('Você confirma que recebeu o pagamento desta OS?')) return
-        try {
-            await axios.put(`${OS_API_URL}/${orderId}/mark-received`, {}, { withCredentials: true })
-            toast('Recebimento confirmado!', 'success')
-            fetchStats() // Recarrega para atualizar os cards de valores
-        } catch (error) {
-            toast(error.response?.data?.message || 'Erro ao confirmar recebimento.', 'error')
-        }
-    }
 
-    // Mapeia status para label e classe CSS (Padronizado)
-    const statusMap = {
-        'ABERTA': { label: 'Aberta', css: 'status-aberto' },
-        'EM_ANDAMENTO': { label: 'Em Andamento', css: 'status-em-andamento' },
-        'CONCLUIDA': { label: 'Concluída', css: 'status-concluido' },
-        'CANCELADA': { label: 'Cancelada', css: 'status-cancelada' },
-        'REQUER_INSPECAO': { label: 'Requer Inspeção', css: 'status-inspecao' }
-    }
+
+
 
     if (loading) return <div style={{ textAlign: 'center', padding: '3rem' }}><Loader2 className="animate-spin" size={32} /></div>
     if (!stats) return <div style={{ padding: '2rem' }}>Erro ao carregar dados.</div>
@@ -151,27 +135,7 @@ export function TecnicoDashboard() {
                                     <p>{order.clientName} • {order.openedAt}</p>
                                 </div>
                                 <div className="item-actions" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                    {order.status === 'CONCLUIDA' && order.technicianPaymentStatus === 'A_RECEBER' && (
-                                        <button 
-                                            className="btn-success" 
-                                            onClick={() => handleConfirmPayment(order.id)}
-                                            title="Confirmar Recebimento"
-                                            style={{ 
-                                                padding: '4px 8px', 
-                                                fontSize: '0.75rem', 
-                                                display: 'flex', 
-                                                alignItems: 'center', 
-                                                gap: '4px',
-                                                borderRadius: '4px',
-                                                border: 'none',
-                                                backgroundColor: '#10b981',
-                                                color: 'white',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            <Check size={14} /> Confirmar Pgto
-                                        </button>
-                                    )}
+
                                     <span className={`status-badge ${statusMap[order.status]?.css || ''}`}>
                                         {statusMap[order.status]?.label || order.status}
                                     </span>

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { DollarSign, AlertCircle, ClipboardList, Loader2, Eye } from 'lucide-react'
 import axios from 'axios'
+import { statusMap } from '../../utils/statusUtils'
 import '../../Styles/Dashboards.css'
-
 const API_URL = 'http://localhost:8080/api/dashboard/stats'
 
 // Dashboard Financeiro — métricas de receita e monitoramento de OS
@@ -37,14 +37,7 @@ export function FinanceiroDashboard() {
         return (val || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
     }
 
-    // Mapeia status para label e classe CSS (Padronizado)
-    const statusMap = {
-        'ABERTA': { label: 'Aberta', css: 'status-aberto' },
-        'EM_ANDAMENTO': { label: 'Em Andamento', css: 'status-em-andamento' },
-        'CONCLUIDA': { label: 'Concluída', css: 'status-concluido' },
-        'CANCELADA': { label: 'Cancelada', css: 'status-cancelada' },
-        'REQUER_INSPECAO': { label: 'Requer Inspeção', css: 'status-inspecao' }
-    }
+
 
     return (
         <div>
@@ -112,6 +105,15 @@ export function FinanceiroDashboard() {
                     </div>
                     <span className="stat-value" style={{ color: '#059669' }}>{formatCurrency(stats.totalProfit)}</span>
                     <span className="stat-desc">Receita líquida da empresa</span>
+                </div>
+
+                <div className="stat-card" style={{ borderLeft: '4px solid #f59e0b' }}>
+                    <div className="stat-header">
+                        <span className="stat-title">Pagamentos Pendentes</span>
+                        <ClipboardList className="stat-icon" size={20} color="#f59e0b" />
+                    </div>
+                    <span className="stat-value">{stats.pendingApprovalPayments || 0}</span>
+                    <span className="stat-desc" style={{ color: '#f59e0b' }}>Aguardando o Financeiro</span>
                 </div>
 
                 <div className="stat-card">

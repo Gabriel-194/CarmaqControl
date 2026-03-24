@@ -88,20 +88,25 @@ public class ServiceOrder {
     @Builder.Default
     @Column(name = "expenses_value")
     private Double expensesValue = 0.0;
-
-    // Km rodados informados manualmente pelo técnico
+    
+    // Valor do Desconto aplicado ao Valor Final Faturado.
     @Builder.Default
-    @Column(name = "displacement_km")
-    private Double displacementKm = 0.0;
+    @Column(name = "discount_value")
+    private Double discountValue = 0.0;
+
+
 
     // Valor que será pago/transferido ao técnico (calculado automaticamente: 10% de serviceValue + expensesValue)
     // O total faturado (totalValue) também é calculado dinamicamente: serviceValue + expensesValue + partsValue
     // Estes campos não são mais persistidos diretamente no banco para garantir dinamismo.
 
-    // Status do pagamento do técnico: A_RECEBER ou RECEBIDO
+    // Status do pagamento do técnico: A_RECEBER, PENDENTE_APROVACAO, REJEITADO ou RECEBIDO
     @Builder.Default
-    @Column(name = "technician_payment_status", length = 20)
+    @Column(name = "technician_payment_status", length = 30)
     private String technicianPaymentStatus = "A_RECEBER";
+
+    @Column(name = "rejection_reason", length = 500)
+    private String rejectionReason;
 
     // Data de abertura
     @Column(name = "opened_at")

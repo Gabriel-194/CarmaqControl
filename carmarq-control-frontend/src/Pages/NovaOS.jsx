@@ -34,9 +34,9 @@ export default function NovaOS() {
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
     const [formErrors, setFormErrors] = useState({})
-    const [suggestions, setSuggestions] = useState(null)
     const [previewData, setPreviewData] = useState(null)
     const [isClientModalOpen, setIsClientModalOpen] = useState(false)
+    const [clientSearchTerm, setClientSearchTerm] = useState('')
 
     const [formData, setFormData] = useState({
         clienteId: '',
@@ -50,6 +50,12 @@ export default function NovaOS() {
         valorServico: '',
         serviceDate: ''
     })
+
+    const handleClientSearch = (value) => {
+        setClientSearchTerm(value)
+        const selected = listaClientes.find(c => c.companyName.toLowerCase() === value.toLowerCase())
+        setFormData(prev => ({ ...prev, clienteId: selected ? selected.id : '' }))
+    }
 
     const clienteSelecionado = listaClientes.find(c => c.id === parseInt(formData.clienteId))
 
@@ -84,22 +90,7 @@ export default function NovaOS() {
         carregarDados()
     }, [])
 
-    // Busca sugestões automáticas ao selecionar uma máquina
-    const fetchSuggestions = useCallback(async (machineId) => {
-        if (!machineId) {
-            setSuggestions(null)
-            return
-        }
-        try {
-            const res = await axios.get(`${API_BASE}/service-orders/suggestions`, {
-                params: { machineId },
-                withCredentials: true
-            })
-            setSuggestions(res.data)
-        } catch (error) {
-            console.error('Erro ao buscar sugestões', error)
-        }
-    }, [])
+
 
     // Busca prévia de valores financeiros do backend
     useEffect(() => {
@@ -134,7 +125,6 @@ export default function NovaOS() {
             }
             return { ...prev, maquinaId: machineId, valorServico: newValor };
         });
-        fetchSuggestions(machineId);
     }
     
     // Gerencia a troca de tipo de serviço
@@ -237,16 +227,19 @@ export default function NovaOS() {
                                         <Plus size={14} /> Novo Cliente
                                     </button>
                                 </div>
-                                <select
+                                <input
+                                    list="clients-datalist"
                                     className={`form-input ${formErrors.clientId ? 'input-error' : ''}`}
-                                    value={formData.clienteId}
-                                    onChange={e => setFormData({ ...formData, clienteId: e.target.value })}
-                                >
-                                    <option value="">Selecione o cliente...</option>
+                                    placeholder="Digite para pesquisar o cliente..."
+                                    value={clientSearchTerm}
+                                    onChange={e => handleClientSearch(e.target.value)}
+                                    autoComplete="off"
+                                />
+                                <datalist id="clients-datalist">
                                     {listaClientes.map(c => (
-                                        <option key={c.id} value={c.id}>{c.companyName}</option>
+                                        <option key={c.id} value={c.companyName} />
                                     ))}
-                                </select>
+                                </datalist>
                                 {formErrors.clientId && <span className="error-message">{formErrors.clientId}</span>}
                             </div>
 
@@ -283,12 +276,7 @@ export default function NovaOS() {
                                 {formErrors.machineId && <span className="error-message">{formErrors.machineId}</span>}
                             </div>
 
-                            {/* Sugestão de tipo de serviço */}
-                            {suggestions && (
-                                <div className="service-type-badge">
-                                    <Wrench size={14} /> {suggestions.suggestedServiceType}
-                                </div>
-                            )}
+
 
                             <div className="form-grid">
                                 {/* Seleção de Técnico */}
@@ -422,7 +410,7 @@ export default function NovaOS() {
                                 <textarea
                                     className="form-input"
                                     rows="2"
-                                    placeholder={suggestions?.autoObservation || 'Observações adicionais...'}
+                                    placeholder="Observações adicionais..."
                                     value={formData.observacoes}
                                     onChange={e => setFormData({ ...formData, observacoes: e.target.value })}
                                 ></textarea>
@@ -442,72 +430,38 @@ export default function NovaOS() {
                             </button>
                         </form>
 
-                        {/* Coluna lateral — Painel de Sugestões Automáticas */}
+                        {/* Coluna lateral — Painel Financeiro e Logístico */}
                         <div className="suggestions-panel">
-                            {suggestions ? (
+                            {previewData ? (
                                 <>
                                     {/* Resumo Financeiro Real (Vindo do Backend /Preview) */}
                                     <div className="suggestion-card finance-summary">
                                         <h3><DollarSign size={16} /> Resumo Financeiro</h3>
                                         <div className="finance-line">
                                             <span>Mão de Obra</span>
-                                            <span className="value">R$ {(previewData?.serviceValue || 0).toFixed(2)}</span>
+                                            <span className="value">R$ {(previewData.serviceValue || 0).toFixed(2)}</span>
                                         </div>
                                         <div className="finance-line">
                                             <span>Despesas</span>
-                                            <span className="value">R$ {(previewData?.expensesValue || 0).toFixed(2)}</span>
+                                            <span className="value">R$ {(previewData.expensesValue || 0).toFixed(2)}</span>
                                         </div>
                                         <div className="finance-line" style={{ color: '#ef4444' }}>
                                             <span>Pgto Técnico (Despesa 10%)</span>
-                                            <span className="value">- R$ {(previewData?.technicianPayment || 0).toFixed(2)}</span>
+                                            <span className="value">- R$ {(previewData.technicianPayment || 0).toFixed(2)}</span>
                                         </div>
                                         <div className="finance-line total-line">
                                             <span>Total Líquido Estimado</span>
                                             <span className="value" style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>
-                                                R$ {(previewData?.netProfit || 0).toFixed(2)}
+                                                R$ {(previewData.netProfit || 0).toFixed(2)}
                                             </span>
                                         </div>
                                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'right', marginTop: '0.5rem' }}>
-                                            Total Cobrado: R$ {(previewData?.totalValue || 0).toFixed(2)}
+                                            Total Cobrado: R$ {(previewData.totalValue || 0).toFixed(2)}
                                         </div>
                                     </div>
-
-                                    {/* Info da Máquina */}
-                                    <div className="suggestion-card">
-                                        <h3><Lightbulb size={16} /> Detalhes da Máquina</h3>
-                                        <p style={{ fontSize: '0.9rem', fontWeight: 600 }}>{typeLabels[suggestions.machineType] || suggestions.machineType}</p>
-                                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                                            {suggestions.machineModel}
-                                        </p>
-                                        {suggestions.machineDescription && (
-                                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-                                                {suggestions.machineDescription}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    {/* Peças Sugeridas */}
-                                    {suggestions.suggestedParts && suggestions.suggestedParts.length > 0 && (
-                                        <div className="suggestion-card">
-                                            <h3><Package size={16} /> Peças Frequentes</h3>
-                                            <ul className="suggested-parts-list">
-                                                {suggestions.suggestedParts.map((part, idx) => (
-                                                    <li key={idx}>
-                                                        <span className="part-dot"></span>
-                                                        {part}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-                                                * Peças podem ser adicionadas depois de criar a OS
-                                            </p>
-                                        </div>
-                                    )}
-
-
 
                                     {/* Estimativa de Viagem (Calculada) */}
-                                    {previewData?.distanceKm && (
+                                    {previewData.distanceKm && (
                                         <div className="suggestion-card travel-estimate">
                                             <h3><MapPin size={16} /> Logística de Deslocamento</h3>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
@@ -527,15 +481,13 @@ export default function NovaOS() {
                                     )}
                                 </>
                             ) : (
-                                <>
-                                    <div className="suggestion-card suggestions-empty">
-                                        <Zap size={32} />
-                                        <p style={{ fontWeight: 600 }}>Automação Inteligente</p>
-                                        <p style={{ marginTop: '0.5rem' }}>
-                                            Selecione uma <strong>máquina</strong> para ativar as sugestões de valor e peças.
-                                        </p>
-                                    </div>
-                                </>
+                                <div className="suggestion-card suggestions-empty">
+                                    <DollarSign size={32} />
+                                    <p style={{ fontWeight: 600 }}>Resumo Financeiro</p>
+                                    <p style={{ marginTop: '0.5rem' }}>
+                                        Preencha a <strong>máquina</strong> e o <strong>cliente</strong> para visualizar as estimativas financeiras da OS.
+                                    </p>
+                                </div>
                             )}
                         </div>
                     </div>
