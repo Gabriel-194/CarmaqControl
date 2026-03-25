@@ -23,6 +23,7 @@ const typeLabels = {
     GRAVADORA_LASER: 'Gravadora a Laser',
 }
 
+
 // Página de Detalhes da Ordem de Serviço — integrada com API real
 export default function OrdemDetalhes() {
     const { id } = useParams()
@@ -97,39 +98,23 @@ export default function OrdemDetalhes() {
                 responseType: 'blob',
                 withCredentials: true
             });
+            const isInstalacao = osData?.serviceType === 'INSTALACAO';
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `OS_${id}_Manutencao.pdf`);
+            link.setAttribute('download', isInstalacao ? `OS_${id}_Instalacao.xlsx` : `OS_${id}_Manutencao.pdf`);
             document.body.appendChild(link);
             link.click();
             link.remove();
+            window.URL.revokeObjectURL(url);
         } catch (error) {
-            toast('Erro ao gerar relatório PDF.', 'error');
-        }
-    }
-
-    const handleDownloadInstalacaoExcel = async () => {
-        try {
-            const response = await axios.get(`${API_URL}/${id}/export/instalacao-excel`, {
-                responseType: 'blob',
-                withCredentials: true
-            });
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `OS_${id}_Entrega_Tecnica.xlsx`);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-        } catch (error) {
-            toast('Erro ao gerar Excel de Instalação.', 'error');
+            toast('Erro ao gerar relatório principal.', 'error');
         }
     }
 
     const handleDownloadDespesasExcel = async () => {
         try {
-            const response = await axios.get(`${API_URL}/${id}/export/despesas-excel`, {
+            const response = await axios.get(`${API_URL}/${id}/report/expenses`, {
                 responseType: 'blob',
                 withCredentials: true
             });
@@ -140,6 +125,7 @@ export default function OrdemDetalhes() {
             document.body.appendChild(link);
             link.click();
             link.remove();
+            window.URL.revokeObjectURL(url);
         } catch (error) {
             toast('Erro ao gerar Excel de Despesas.', 'error');
         }
@@ -517,56 +503,44 @@ export default function OrdemDetalhes() {
                                 </>
                             )}
                         </div>
-                        <button 
-                            className="btn-secondary btn-full" 
-                            onClick={handleDownloadReport} 
-                            style={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'center', 
-                                gap: '0.5rem', 
-                                marginTop: '1rem', 
-                                fontSize: '0.85rem', 
-                                padding: '0.5rem',   
-                                color: 'var(--text-muted)'
-                            }}
-                        >
-                            <Download size={16} /> Exportar Manutenção (PDF)
-                        </button>
-                        <button 
-                            className="btn-secondary btn-full" 
-                            onClick={handleDownloadInstalacaoExcel} 
-                            style={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'center', 
-                                gap: '0.5rem', 
-                                marginTop: '0.5rem', 
-                                fontSize: '0.85rem', 
-                                padding: '0.5rem',   
-                                color: 'var(--text-muted)'
-                            }}
-                        >
-                            <Download size={16} /> Exportar Instalação (Excel)
-                        </button>
-                        <button 
-                            className="btn-secondary btn-full" 
-                            onClick={handleDownloadDespesasExcel} 
-                            style={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'center', 
-                                gap: '0.5rem', 
-                                marginTop: '0.5rem', 
-                                fontSize: '0.85rem', 
-                                padding: '0.5rem',   
-                                color: 'var(--text-muted)'
-                            }}
-                        >
-                            <DollarSign size={16} /> Exportar Despesas (Excel)
-                        </button>
-
-                    </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem' }}>
+                                <button
+                                    className="btn-secondary btn-full"
+                                    onClick={handleDownloadReport}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '0.5rem',
+                                        fontSize: '0.85rem',
+                                        padding: '0.5rem',
+                                        color: 'var(--text-muted)'
+                                    }}
+                                >
+                                    <Download size={16} />
+                                    {osData?.serviceType === 'INSTALACAO'
+                                        ? 'Exportar OS Instalação (.xlsx)'
+                                        : 'Exportar OS Manutenção (.pdf)'}
+                                </button>
+                            
+                                <button
+                                    className="btn-secondary btn-full"
+                                    onClick={handleDownloadDespesasExcel}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '0.5rem',
+                                        fontSize: '0.85rem',
+                                        padding: '0.5rem',
+                                        color: 'var(--text-muted)'
+                                    }}
+                                >
+                                    <Download size={16} />
+                                    Exportar Despesas (.xlsx)
+                                </button>
+                            </div>
+                        </div>
                 </div>
             </main>
 

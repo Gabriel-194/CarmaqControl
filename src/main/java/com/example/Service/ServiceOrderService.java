@@ -304,11 +304,14 @@ public class ServiceOrderService {
     // Calcula as horas da Tabela de Tempo e reformula o valor do Serviço
     public void refreshLaborValue(ServiceOrder order, List<TimeTracking> times) {
         if ("MANUTENCAO".equals(order.getServiceType())) {
+            // Valor padrão do serviço é calculado por horas
             double rateTrabalho = 250.0; // CARMARQ
             if ("VALENTIM".equals(order.getManutencaoOrigin())) {
                 rateTrabalho = 185.0;
             }
-            double rateDeslocamento = 85.0; // Valor fixo para Hora Deslocamento
+            
+            // Taxa de deslocamento
+            double rateDeslocamento = 85.0;
             
             long trabalhoMinutes = 0;
             long deslocamentoMinutes = 0;
@@ -319,7 +322,7 @@ public class ServiceOrderService {
                      if ("TRABALHO".equals(tt.getType())) {
                          trabalhoMinutes += mins;
                      } else {
-                         // Qualquer outro tipo de tempo é considerado deslocamento
+                         // Demais tempos (Saída/Retorno da Sede) entram como deslocamento
                          deslocamentoMinutes += mins;
                      }
                  }
@@ -405,5 +408,39 @@ public class ServiceOrderService {
         }
 
         return builder.build();
+    }
+
+    // =========================================================================
+    // NOVOS MÉTODOS ADICIONADOS
+    // =========================================================================
+
+    public com.example.DTOs.ServiceOrderSuggestionDTO generateSuggestions(Long machineId) {
+        Machine machine = machineRepository.findById(machineId)
+                .orElseThrow(() -> new RuntimeException("Máquina não encontrada com id " + machineId));
+
+        return com.example.DTOs.ServiceOrderSuggestionDTO.builder()
+                .suggestedServiceType("MANUTENCAO")
+                .estimatedHours(2.0)
+                .hourlyRate(250.0)
+                .estimatedServiceValue(500.0)
+                .estimatedTechnicianPayment(50.0)
+                .machineType(machine.getMachineType() != null ? machine.getMachineType().name() : "Desconhecido")
+                .machineModel(machine.getModel())
+                .machineBrand("-")
+                .machineDescription("-")
+                .autoObservation("Sugestão automática gerada com sucesso.")
+                .build();
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public ServiceOrderResponseDTO markAsReceived(Long id) {
+        ServiceOrder order = serviceOrderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Ordem de serviço não encontrada com id " + id));
+        order.setTechnicianPaymentStatus("RECEBIDO");
+        order = serviceOrderRepository.save(order);
+        
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        Usuario currentUser = (Usuario) auth.getPrincipal();
+        return mapToDTO(order, currentUser.getRole());
     }
 }
