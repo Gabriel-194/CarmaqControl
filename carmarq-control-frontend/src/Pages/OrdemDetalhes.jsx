@@ -133,9 +133,20 @@ export default function OrdemDetalhes() {
 
     // Aprovar pagamento ao técnico (ação estrutural para Financeiro/Proprietário)
     const handleApprovePayment = async () => {
-        if (!window.confirm('Aprovar o repasse deste valor ao técnico? Esta ação não pode ser desfeita e indicará que o dinheiro foi transferido.')) return
+        const confirmApprove = window.confirm('Aprovar o repasse deste valor ao técnico? Esta ação não pode ser desfeita e indicará que o dinheiro foi transferido.');
+        if (!confirmApprove) return;
+
+        let finalDiscount = osData.discountValue || 0;
+        const applyDiscount = window.confirm(`O desconto atual é R$ ${finalDiscount.toFixed(2)}. Deseja alterar ou confirmar este valor antes de aprovar o pagamento?`);
+        
+        if (applyDiscount) {
+            const input = window.prompt("Informe o valor total do desconto final (R$):", finalDiscount);
+            if (input === null) return; // Cancelou o prompt de valor
+            finalDiscount = parseFloat(input) || 0;
+        }
+
         try {
-            await axios.put(`${API_URL}/${id}/approve-payment`, {}, { withCredentials: true })
+            await axios.put(`${API_URL}/${id}/approve-payment`, { discountValue: finalDiscount }, { withCredentials: true })
             toast('Pagamento aprovado e repassado ao técnico!', 'success')
             fetchOS()
         } catch (error) {
@@ -308,9 +319,9 @@ export default function OrdemDetalhes() {
                             </div>
 
                             <div className="tab-content">
-                                {activeTab === 'detalhes' && <TabelaTempos serviceOrderId={id} userRole={user?.role} onUpdate={fetchOS} />}
+                                {activeTab === 'detalhes' && <TabelaTempos serviceOrderId={id} userRole={user?.role} orderStatus={osData.status} onUpdate={fetchOS} />}
                                 {activeTab === 'pecas' && <ListaPecas serviceOrderId={id} orderStatus={osData.status} onUpdate={fetchOS} />}
-                                {activeTab === 'despesas' && <ListaDespesas serviceOrderId={id} orderStatus={osData.status} onUpdate={fetchOS} />}
+                                {activeTab === 'despesas' && <ListaDespesas serviceOrderId={id} orderStatus={osData.status} userRole={user?.role} onUpdate={fetchOS} />}
                                 {activeTab === 'fotos' && <ServicePhotos serviceOrderId={id} orderStatus={osData.status} />}
                             </div>
                         </div>
@@ -382,61 +393,90 @@ export default function OrdemDetalhes() {
                             <h3>Resumo Financeiro</h3>
                             {user?.role !== 'TECNICO' ? (
                                 <>
+                                    <div className="finance-section-title" style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--primary-color)', marginTop: '0.5rem', textTransform: 'uppercase' }}>
+                                        Itens de Serviço (Base 10%)
+                                    </div>
                                     <div className="finance-row">
                                         <span>Mão de Obra</span>
                                         <span>R$ {(osData.serviceValue || 0).toFixed(2)}</span>
                                     </div>
-
                                     <div className="finance-row">
-                                        <span>Despesas</span>
-                                        <span>R$ {(osData.expensesValue || 0).toFixed(2)}</span>
+                                        <span>Tempo de Viagem</span>
+                                        <span>R$ {(osData.travelValue || 0).toFixed(2)}</span>
+                                    </div>
+
+                                    <div className="finance-section-title" style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-muted)', marginTop: '0.75rem', textTransform: 'uppercase' }}>
+                                        Custos / Reembolsos (Base 0%)
+                                    </div>
+                                    <div className="finance-row">
+                                        <span>Deslocamento (Km)</span>
+                                        <span>R$ {(osData.displacementValue || 0).toFixed(2)}</span>
                                     </div>
                                     <div className="finance-row">
                                         <span>Peças</span>
                                         <span>R$ {(osData.partsValue || 0).toFixed(2)}</span>
                                     </div>
+                                    <div className="finance-row">
+                                        <span>Despesas Extras</span>
+                                        <span>R$ {(osData.expensesValue || 0).toFixed(2)}</span>
+                                    </div>
+                                    
+                                    <div className="finance-divider"></div>
+                                    
+                                    <div className="finance-row" style={{ fontWeight: 'bold' }}>
+                                        <span>Total Bruto</span>
+                                        <span>R$ {(osData.totalValue + (osData.discountValue || 0)).toFixed(2)}</span>
+                                    </div>
                                     <div className="finance-row" style={{ color: '#ef4444' }}>
                                         <span>Desconto Concedido</span>
                                         <span>- R$ {(osData.discountValue || 0).toFixed(2)}</span>
                                     </div>
-                                    <div className="finance-row" style={{ color: '#ef4444' }}>
-                                        <span>Pgto Técnico (Despesa)</span>
-                                        <span>- R$ {(osData.technicianPayment || 0).toFixed(2)}</span>
-                                    </div>
+                                    
                                     <div className="finance-divider"></div>
+                                    
                                     <div className="finance-total">
-                                        <span>Total Cobrado</span>
+                                        <span>Total Faturado</span>
                                         <span style={{ color: '#10b981' }}>R$ {(osData.totalValue || 0).toFixed(2)}</span>
                                     </div>
-                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'right', marginTop: '0.25rem' }}>
-                                        Lucro Líquido: R$ {(osData.netProfit || 0).toFixed(2)}
+
+                                    <div className="finance-divider" style={{ opacity: 0.3, margin: '0.5rem 0' }}></div>
+
+                                    <div className="finance-row" style={{ fontSize: '0.85rem' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <span>Repasse Técnico</span>
+                                            <small style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>(10% de Mão de Obra + Viagem)</small>
+                                        </div>
+                                        <span style={{ color: '#ef4444' }}>- R$ {(osData.technicianPayment || 0).toFixed(2)}</span>
+                                    </div>
+
+                                    <div className="finance-divider"></div>
+                                    <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#059669', textAlign: 'right', marginTop: '0.5rem' }}>
+                                        Lucro Carmarq: R$ {(osData.netProfit || 0).toFixed(2)}
                                     </div>
 
                                     <div className="finance-divider" style={{ margin: '1rem 0' }}></div>
                                     
-                                    {/* Edição do Desconto (Proprietário/Financeiro) */}
-                                    {user?.role !== 'TECNICO' && (
-                                        <div className="detail-row" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                                            <strong style={{ flex: 1, fontSize: '0.85rem' }}>Conceder Desconto (R$):</strong>
-                                            <input 
-                                                type="number" 
-                                                className="form-input" 
-                                                value={discountInput} 
-                                                onChange={e => setDiscountInput(e.target.value)}
-                                                disabled={osData.status === 'CANCELADA' || osData.status === 'CONCLUIDA'}
-                                                style={{ width: '80px', margin: 0, padding: '0.4rem' }}
-                                                placeholder="0.00"
-                                            />
-                                            <button 
-                                                className="btn-primary" 
-                                                onClick={handleSaveDiscount} 
-                                                disabled={osData.status === 'CANCELADA' || osData.status === 'CONCLUIDA'}
-                                                style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem' }}
-                                            >
-                                                Aplicar
-                                            </button>
-                                        </div>
-                                    )}
+                                    {/* Edição do Desconto */}
+                                    <div className="detail-row" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                                        <strong style={{ flex: 1, fontSize: '0.85rem' }}>Conceder Desconto (R$):</strong>
+                                        <input 
+                                            type="number" 
+                                            className="form-input" 
+                                            value={discountInput} 
+                                            onChange={e => setDiscountInput(e.target.value)}
+                                            disabled={osData.status === 'CANCELADA' || osData.status === 'CONCLUIDA' || osData.status === 'PAGO'}
+                                            style={{ width: '80px', margin: 0, padding: '0.4rem' }}
+                                            placeholder="0.00"
+                                        />
+                                        <button 
+                                            className="btn-primary" 
+                                            onClick={handleSaveDiscount} 
+                                            disabled={osData.status === 'CANCELADA' || osData.status === 'CONCLUIDA' || osData.status === 'PAGO'}
+                                            style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem' }}
+                                        >
+                                            Aplicar
+                                        </button>
+                                    </div>
 
                                     <div className="finance-row" style={{ marginTop: '0.5rem' }}>
                                         <span>Status do Repasse:</span>
@@ -478,7 +518,10 @@ export default function OrdemDetalhes() {
                             ) : (
                                 <>
                                     <div className="finance-row" style={{ marginTop: '0.5rem' }}>
-                                        <span>Seu Pagamento</span>
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <span>Seu Pagamento</span>
+                                            <small style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>(10% de Mão de Obra + Viagem)</small>
+                                        </div>
                                         <span style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>
                                             R$ {(osData.technicianPayment || 0).toFixed(2)}
                                         </span>
@@ -503,6 +546,7 @@ export default function OrdemDetalhes() {
                                 </>
                             )}
                         </div>
+
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem' }}>
                                 <button
                                     className="btn-secondary btn-full"

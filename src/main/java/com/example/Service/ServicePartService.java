@@ -48,9 +48,9 @@ public class ServicePartService {
         ServiceOrder order = serviceOrderRepository.findById(serviceOrderId)
                 .orElseThrow(() -> new RuntimeException("Ordem de serviço não encontrada com id " + serviceOrderId));
 
-        // Validação de workflow: só permite adicionar peças se EM_ANDAMENTO
-        if (!"EM_ANDAMENTO".equals(order.getStatus())) {
-            throw new RuntimeException("Peças só podem ser adicionadas quando a OS está EM_ANDAMENTO");
+        // Validação de workflow: permite adicionar peças em qualquer estado, exceto se já estiver PAGO.
+        if ("PAGO".equals(order.getStatus())) {
+            throw new RuntimeException("Não é possível adicionar peças em uma OS com status PAGO");
         }
 
         ServicePart part = ServicePart.builder()
@@ -76,15 +76,37 @@ public class ServicePartService {
         ServiceOrder order = part.getServiceOrder();
         validateOsOwnership(order.getId());
 
-        // Validação de workflow: só permite remover peças se EM_ANDAMENTO
-        if (!"EM_ANDAMENTO".equals(order.getStatus())) {
-            throw new RuntimeException("Peças só podem ser removidas quando a OS está EM_ANDAMENTO");
+        // Validação de workflow: permite remover peças em qualquer estado, exceto se já estiver PAGO.
+        if ("PAGO".equals(order.getStatus())) {
+            throw new RuntimeException("Não é possível remover peças em uma OS com status PAGO");
         }
 
         servicePartRepository.deleteById(partId);
 
         // Recalcula o total da OS após remover peça
         serviceOrderService.refreshPartsValue(order);
+    }
+
+    @Transactional
+    public ServicePartResponseDTO updatePart(Long partId, ServicePartRequestDTO dto) {
+        ServicePart part = servicePartRepository.findById(partId)
+                .orElseThrow(() -> new RuntimeException("Peça não encontrada com id " + partId));
+
+        ServiceOrder order = part.getServiceOrder();
+        validateOsOwnership(order.getId());
+
+        if ("PAGO".equals(order.getStatus())) {
+            throw new RuntimeException("Não é possível editar peças em uma OS com status PAGO");
+        }
+
+        part.setPartName(dto.getPartName());
+        part.setQuantity(dto.getQuantity());
+        part.setUnitPrice(dto.getUnitPrice());
+
+        part = servicePartRepository.save(part);
+        serviceOrderService.refreshPartsValue(order);
+
+        return mapToDTO(part);
     }
 
     private void validateOsOwnership(Long serviceOrderId) {

@@ -58,6 +58,10 @@ public class ServiceOrderResponseDTO {
     private Double discountValue;
     private Double totalValue;
 
+    // Novos campos de custo (Fase 6)
+    private Double travelValue;
+    private Double displacementValue;
+
     // Valor visível ao técnico
     private Double technicianPayment;
 

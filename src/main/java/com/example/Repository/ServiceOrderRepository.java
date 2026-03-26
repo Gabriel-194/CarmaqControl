@@ -91,15 +91,15 @@ public interface ServiceOrderRepository extends JpaRepository<ServiceOrder, Long
     long countPendingApprovalPayments();
 
     // Soma de valores totais (para receita)
-    @Query("SELECT COALESCE(SUM(COALESCE(so.serviceValue, 0.0) + COALESCE(so.expensesValue, 0.0) + COALESCE(so.partsValue, 0.0)), 0.0) FROM ServiceOrder so WHERE so.status = 'CONCLUIDA'")
+    @Query("SELECT COALESCE(SUM(COALESCE(so.serviceValue, 0.0) + COALESCE(so.travelValue, 0.0) + COALESCE(so.displacementValue, 0.0) + COALESCE(so.expensesValue, 0.0) + COALESCE(so.partsValue, 0.0)), 0.0) FROM ServiceOrder so WHERE so.status = 'CONCLUIDA'")
     Double sumTotalValueCompleted();
 
     // Soma de valores do mês corrente
-    @Query("SELECT COALESCE(SUM(COALESCE(so.serviceValue, 0.0) + COALESCE(so.expensesValue, 0.0) + COALESCE(so.partsValue, 0.0)), 0.0) FROM ServiceOrder so WHERE so.status = 'CONCLUIDA' AND (so.closedAt IS NOT NULL AND EXTRACT(MONTH FROM so.closedAt) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(YEAR FROM so.closedAt) = EXTRACT(YEAR FROM CURRENT_DATE))")
+    @Query("SELECT COALESCE(SUM(COALESCE(so.serviceValue, 0.0) + COALESCE(so.travelValue, 0.0) + COALESCE(so.displacementValue, 0.0) + COALESCE(so.expensesValue, 0.0) + COALESCE(so.partsValue, 0.0)), 0.0) FROM ServiceOrder so WHERE so.status = 'CONCLUIDA' AND (so.closedAt IS NOT NULL AND EXTRACT(MONTH FROM so.closedAt) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(YEAR FROM so.closedAt) = EXTRACT(YEAR FROM CURRENT_DATE))")
     Double sumTotalValueCurrentMonth();
 
     // Soma de valores pendentes (OS abertas ou em andamento)
-    @Query("SELECT COALESCE(SUM(COALESCE(so.serviceValue, 0.0) + COALESCE(so.expensesValue, 0.0) + COALESCE(so.partsValue, 0.0)), 0.0) FROM ServiceOrder so WHERE so.status NOT IN ('CONCLUIDA', 'CANCELADA')")
+    @Query("SELECT COALESCE(SUM(COALESCE(so.serviceValue, 0.0) + COALESCE(so.travelValue, 0.0) + COALESCE(so.displacementValue, 0.0) + COALESCE(so.expensesValue, 0.0) + COALESCE(so.partsValue, 0.0)), 0.0) FROM ServiceOrder so WHERE so.status NOT IN ('CONCLUIDA', 'CANCELADA')")
     Double sumTotalValuePending();
 
     // Buscar OS recentes
@@ -107,52 +107,62 @@ public interface ServiceOrderRepository extends JpaRepository<ServiceOrder, Long
     List<ServiceOrder> findTop10ByOrderByCreatedAtDesc();
 
     // Soma de pagamentos do técnico por status financeiro
-    @Query("SELECT COALESCE(SUM((COALESCE(so.serviceValue, 0.0) * 0.1) + COALESCE(so.expensesValue, 0.0)), 0.0) FROM ServiceOrder so WHERE so.technician.id = :techId AND so.technicianPaymentStatus = :paymentStatus")
+    @Query("SELECT COALESCE(SUM((COALESCE(so.serviceValue, 0.0) + COALESCE(so.travelValue, 0.0)) * 0.1), 0.0) FROM ServiceOrder so WHERE so.technician.id = :techId AND so.technicianPaymentStatus = :paymentStatus")
     Double sumTechnicianPaymentByStatus(@Param("techId") Long techId, @Param("paymentStatus") String paymentStatus);
 
     // Soma total de pagamentos do técnico (todas as OS atribuídas)
-    @Query("SELECT COALESCE(SUM((COALESCE(so.serviceValue, 0.0) * 0.1) + COALESCE(so.expensesValue, 0.0)), 0.0) FROM ServiceOrder so WHERE so.technician.id = :techId")
+    @Query("SELECT COALESCE(SUM((COALESCE(so.serviceValue, 0.0) + COALESCE(so.travelValue, 0.0)) * 0.1), 0.0) FROM ServiceOrder so WHERE so.technician.id = :techId")
     Double sumTechnicianPaymentTotal(@Param("techId") Long techId);
 
+    // Soma de custos operacionais (Km + Peças + Desp) para faturamento
+    @Query("SELECT COALESCE(SUM(COALESCE(so.displacementValue, 0.0) + COALESCE(so.expensesValue, 0.0) + COALESCE(so.partsValue, 0.0)), 0.0) FROM ServiceOrder so WHERE so.status = 'CONCLUIDA'")
+    Double sumTotalReimbursementsCompleted();
+
+    @Query("SELECT COALESCE(SUM(COALESCE(so.displacementValue, 0.0) + COALESCE(so.expensesValue, 0.0) + COALESCE(so.partsValue, 0.0)), 0.0) FROM ServiceOrder so WHERE so.status = 'CONCLUIDA' AND (so.closedAt IS NOT NULL AND EXTRACT(MONTH FROM so.closedAt) = :month AND EXTRACT(YEAR FROM so.closedAt) = :year)")
+    Double sumTotalReimbursementsByMonthAndYear(@Param("month") int month, @Param("year") int year);
+
+    @Query("SELECT COALESCE(SUM(COALESCE(so.displacementValue, 0.0) + COALESCE(so.expensesValue, 0.0) + COALESCE(so.partsValue, 0.0)), 0.0) FROM ServiceOrder so WHERE so.status = 'CONCLUIDA' AND (so.closedAt IS NOT NULL AND EXTRACT(YEAR FROM so.closedAt) = :year)")
+    Double sumTotalReimbursementsByYear(@Param("year") int year);
+
     // Queries para Filtro Mensal
-    @Query("SELECT COALESCE(SUM(COALESCE(so.serviceValue, 0.0) + COALESCE(so.expensesValue, 0.0) + COALESCE(so.partsValue, 0.0)), 0.0) FROM ServiceOrder so WHERE so.status = 'CONCLUIDA' AND (so.closedAt IS NOT NULL AND EXTRACT(MONTH FROM so.closedAt) = :month AND EXTRACT(YEAR FROM so.closedAt) = :year)")
+    @Query("SELECT COALESCE(SUM(COALESCE(so.serviceValue, 0.0) + COALESCE(so.travelValue, 0.0) + COALESCE(so.displacementValue, 0.0) + COALESCE(so.expensesValue, 0.0) + COALESCE(so.partsValue, 0.0)), 0.0) FROM ServiceOrder so WHERE so.status = 'CONCLUIDA' AND (so.closedAt IS NOT NULL AND EXTRACT(MONTH FROM so.closedAt) = :month AND EXTRACT(YEAR FROM so.closedAt) = :year)")
     Double sumTotalValueByMonthAndYear(@Param("month") int month, @Param("year") int year);
 
     @Query("SELECT COUNT(so) FROM ServiceOrder so WHERE so.technicianPaymentStatus = 'PENDENTE_APROVACAO' AND (so.closedAt IS NOT NULL AND EXTRACT(MONTH FROM so.closedAt) = :month AND EXTRACT(YEAR FROM so.closedAt) = :year)")
     long countPendingApprovalPaymentsByMonthAndYear(@Param("month") int month, @Param("year") int year);
 
-    @Query("SELECT COALESCE(SUM((COALESCE(so.serviceValue, 0.0) * 0.1) + COALESCE(so.expensesValue, 0.0)), 0.0) FROM ServiceOrder so WHERE so.status = 'CONCLUIDA' AND (so.closedAt IS NOT NULL AND EXTRACT(MONTH FROM so.closedAt) = :month AND EXTRACT(YEAR FROM so.closedAt) = :year)")
+    @Query("SELECT COALESCE(SUM((COALESCE(so.serviceValue, 0.0) + COALESCE(so.travelValue, 0.0)) * 0.1), 0.0) FROM ServiceOrder so WHERE so.status = 'CONCLUIDA' AND (so.closedAt IS NOT NULL AND EXTRACT(MONTH FROM so.closedAt) = :month AND EXTRACT(YEAR FROM so.closedAt) = :year)")
     Double sumTechnicianPaymentByMonthAndYear(@Param("month") int month, @Param("year") int year);
 
     @Query("SELECT COUNT(so) FROM ServiceOrder so WHERE so.status = :status AND (so.closedAt IS NOT NULL AND EXTRACT(MONTH FROM so.closedAt) = :month AND EXTRACT(YEAR FROM so.closedAt) = :year)")
     long countByStatusAndMonthAndYear(@Param("status") String status, @Param("month") int month, @Param("year") int year);
 
-    @Query("SELECT COALESCE(SUM((COALESCE(so.serviceValue, 0.0) * 0.1) + COALESCE(so.expensesValue, 0.0)), 0.0) FROM ServiceOrder so WHERE so.technician.id = :techId AND so.technicianPaymentStatus = :paymentStatus AND (so.closedAt IS NOT NULL AND EXTRACT(MONTH FROM so.closedAt) = :month AND EXTRACT(YEAR FROM so.closedAt) = :year)")
+    @Query("SELECT COALESCE(SUM((COALESCE(so.serviceValue, 0.0) + COALESCE(so.travelValue, 0.0)) * 0.1), 0.0) FROM ServiceOrder so WHERE so.technician.id = :techId AND so.technicianPaymentStatus = :paymentStatus AND (so.closedAt IS NOT NULL AND EXTRACT(MONTH FROM so.closedAt) = :month AND EXTRACT(YEAR FROM so.closedAt) = :year)")
     Double sumTechnicianPaymentByStatusAndMonthAndYear(@Param("techId") Long techId, @Param("paymentStatus") String paymentStatus, @Param("month") int month, @Param("year") int year);
 
-    @Query("SELECT COALESCE(SUM((COALESCE(so.serviceValue, 0.0) * 0.1) + COALESCE(so.expensesValue, 0.0)), 0.0) FROM ServiceOrder so WHERE so.technician.id = :techId AND so.technicianPaymentStatus = :paymentStatus AND (so.openedAt IS NOT NULL AND EXTRACT(MONTH FROM so.openedAt) = :month AND EXTRACT(YEAR FROM so.openedAt) = :year)")
+    @Query("SELECT COALESCE(SUM((COALESCE(so.serviceValue, 0.0) + COALESCE(so.travelValue, 0.0)) * 0.1), 0.0) FROM ServiceOrder so WHERE so.technician.id = :techId AND so.technicianPaymentStatus = :paymentStatus AND (so.openedAt IS NOT NULL AND EXTRACT(MONTH FROM so.openedAt) = :month AND EXTRACT(YEAR FROM so.openedAt) = :year)")
     Double sumTechnicianPaymentByStatusAndMonthAndYearOpened(@Param("techId") Long techId, @Param("paymentStatus") String paymentStatus, @Param("month") int month, @Param("year") int year);
 
     // Queries para Filtro Anual (Todos os meses)
-    @Query("SELECT COALESCE(SUM(COALESCE(so.serviceValue, 0.0) + COALESCE(so.expensesValue, 0.0) + COALESCE(so.partsValue, 0.0)), 0.0) FROM ServiceOrder so WHERE so.status = 'CONCLUIDA' AND (so.closedAt IS NOT NULL AND EXTRACT(YEAR FROM so.closedAt) = :year)")
+    @Query("SELECT COALESCE(SUM(COALESCE(so.serviceValue, 0.0) + COALESCE(so.travelValue, 0.0) + COALESCE(so.displacementValue, 0.0) + COALESCE(so.expensesValue, 0.0) + COALESCE(so.partsValue, 0.0)), 0.0) FROM ServiceOrder so WHERE so.status = 'CONCLUIDA' AND (so.closedAt IS NOT NULL AND EXTRACT(YEAR FROM so.closedAt) = :year)")
     Double sumTotalValueByYear(@Param("year") int year);
 
     @Query("SELECT COUNT(so) FROM ServiceOrder so WHERE so.technicianPaymentStatus = 'PENDENTE_APROVACAO' AND (so.closedAt IS NOT NULL AND EXTRACT(YEAR FROM so.closedAt) = :year)")
     long countPendingApprovalPaymentsByYear(@Param("year") int year);
 
-    @Query("SELECT COALESCE(SUM((COALESCE(so.serviceValue, 0.0) * 0.1) + COALESCE(so.expensesValue, 0.0)), 0.0) FROM ServiceOrder so WHERE so.status = 'CONCLUIDA'")
+    @Query("SELECT COALESCE(SUM((COALESCE(so.serviceValue, 0.0) + COALESCE(so.travelValue, 0.0)) * 0.1), 0.0) FROM ServiceOrder so WHERE so.status = 'CONCLUIDA'")
     Double sumTotalTechnicianPaymentCompleted();
 
-    @Query("SELECT COALESCE(SUM((COALESCE(so.serviceValue, 0.0) * 0.1) + COALESCE(so.expensesValue, 0.0)), 0.0) FROM ServiceOrder so WHERE so.status = 'CONCLUIDA' AND (so.closedAt IS NOT NULL AND EXTRACT(YEAR FROM so.closedAt) = :year)")
+    @Query("SELECT COALESCE(SUM((COALESCE(so.serviceValue, 0.0) + COALESCE(so.travelValue, 0.0)) * 0.1), 0.0) FROM ServiceOrder so WHERE so.status = 'CONCLUIDA' AND (so.closedAt IS NOT NULL AND EXTRACT(YEAR FROM so.closedAt) = :year)")
     Double sumTechnicianPaymentByYear(@Param("year") int year);
 
     @Query("SELECT COUNT(so) FROM ServiceOrder so WHERE so.status = :status AND (so.closedAt IS NOT NULL AND EXTRACT(YEAR FROM so.closedAt) = :year)")
     long countByStatusAndYear(@Param("status") String status, @Param("year") int year);
 
-    @Query("SELECT COALESCE(SUM((COALESCE(so.serviceValue, 0.0) * 0.1) + COALESCE(so.expensesValue, 0.0)), 0.0) FROM ServiceOrder so WHERE so.technician.id = :techId AND so.technicianPaymentStatus = :paymentStatus AND (so.closedAt IS NOT NULL AND EXTRACT(YEAR FROM so.closedAt) = :year)")
+    @Query("SELECT COALESCE(SUM((COALESCE(so.serviceValue, 0.0) + COALESCE(so.travelValue, 0.0)) * 0.1), 0.0) FROM ServiceOrder so WHERE so.technician.id = :techId AND so.technicianPaymentStatus = :paymentStatus AND (so.closedAt IS NOT NULL AND EXTRACT(YEAR FROM so.closedAt) = :year)")
     Double sumTechnicianPaymentByStatusAndYear(@Param("techId") Long techId, @Param("paymentStatus") String paymentStatus, @Param("year") int year);
 
-    @Query("SELECT COALESCE(SUM((COALESCE(so.serviceValue, 0.0) * 0.1) + COALESCE(so.expensesValue, 0.0)), 0.0) FROM ServiceOrder so WHERE so.technician.id = :techId AND so.technicianPaymentStatus = :paymentStatus AND so.openedAt IS NOT NULL AND EXTRACT(YEAR FROM so.openedAt) = :year")
+    @Query("SELECT COALESCE(SUM((COALESCE(so.serviceValue, 0.0) + COALESCE(so.travelValue, 0.0)) * 0.1), 0.0) FROM ServiceOrder so WHERE so.technician.id = :techId AND so.technicianPaymentStatus = :paymentStatus AND so.openedAt IS NOT NULL AND EXTRACT(YEAR FROM so.openedAt) = :year")
     Double sumTechnicianPaymentByStatusAndYearOpened(@Param("techId") Long techId, @Param("paymentStatus") String paymentStatus, @Param("year") int year);
 
     // Contagens específicas para Dashboard do Técnico
@@ -175,4 +185,7 @@ public interface ServiceOrderRepository extends JpaRepository<ServiceOrder, Long
     long countByTechnicianAndStatusAndMonthAndYear(@Param("techId") Long techId, @Param("status") String status, @Param("month") int month, @Param("year") int year);
 
     List<ServiceOrder> findByStatus(String status);
+    
+    // Verifica se o técnico já atendeu essa máquina (para BOLA check)
+    boolean existsByTechnicianIdAndMachineId(Long technicianId, Long machineId);
 }

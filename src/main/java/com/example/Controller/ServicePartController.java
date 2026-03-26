@@ -40,4 +40,13 @@ public class ServicePartController {
         servicePartService.removePart(partId);
         return ResponseEntity.noContent().build();
     }
+
+    @PutMapping("/{partId}")
+    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'TECNICO')")
+    public ResponseEntity<ServicePartResponseDTO> updatePart(
+            @PathVariable(name = "serviceOrderId") Long serviceOrderId,
+            @PathVariable(name = "partId") Long partId,
+            @Valid @RequestBody ServicePartRequestDTO dto) {
+        return ResponseEntity.ok(servicePartService.updatePart(partId, dto));
+    }
 }

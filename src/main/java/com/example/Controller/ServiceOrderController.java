@@ -120,6 +120,28 @@ public class ServiceOrderController {
         return ResponseEntity.ok(serviceOrderService.markAsReceived(id));
     }
 
+    // ── Aprovar pagamento (Financeiro/Proprietário) ──────────────────────────
+    @PutMapping("/{id}/approve-payment")
+    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO')")
+    public ResponseEntity<ServiceOrderResponseDTO> approvePayment(
+            @PathVariable(name = "id") Long id,
+            @RequestBody(required = false) Map<String, Double> payload) {
+        
+        Double discount = (payload != null && payload.containsKey("discountValue")) 
+                          ? payload.get("discountValue") : null;
+                          
+        return ResponseEntity.ok(serviceOrderService.approvePayment(id, discount));
+    }
+
+    // ── Rejeitar pagamento (Financeiro/Proprietário) ──────────────────────────
+    @PutMapping("/{id}/reject-payment")
+    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO')")
+    public ResponseEntity<ServiceOrderResponseDTO> rejectPayment(
+            @PathVariable(name = "id") Long id,
+            @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(serviceOrderService.rejectPayment(id, body.get("reason")));
+    }
+
 
     @GetMapping("/{id}/report")
     @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO', 'TECNICO')")

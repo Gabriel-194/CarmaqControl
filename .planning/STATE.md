@@ -14,6 +14,13 @@
 - [x] Phase 4 Execution
 - [x] Milestone v1.0 Audit
 - [x] Milestone v1.0 Archiving
+- [x] Phase 5 Execution
+- [x] Phase 6 Execution
+- [x] Phase 7 Execution & PDF Refactor
+- [x] Phase 8 Execution & Performance Tuning
+- [x] Milestone v1.2 Complete
+- [x] Phase 12 Execution (Hardening: BOLA & Mass Assignment)
+- [ ] Phase 13 added: Hardening: Infraestrutura, Concorrência e CSRF
 
 ## Known Issues
 - All initial requirements for v1.0 were met and verified.

@@ -41,4 +41,13 @@ public class ServiceExpenseController {
         serviceExpenseService.removeExpense(serviceOrderId, expenseId);
         return ResponseEntity.noContent().build();
     }
+
+    @PutMapping("/{expenseId}")
+    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'TECNICO')")
+    public ResponseEntity<ServiceExpenseResponseDTO> updateExpense(
+            @PathVariable(name = "serviceOrderId") Long serviceOrderId,
+            @PathVariable(name = "expenseId") Long expenseId,
+            @Valid @RequestBody ServiceExpenseRequestDTO dto) {
+        return ResponseEntity.ok(serviceExpenseService.updateExpense(serviceOrderId, expenseId, dto));
+    }
 }

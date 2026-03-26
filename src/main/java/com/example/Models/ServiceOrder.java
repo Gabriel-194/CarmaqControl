@@ -67,9 +67,13 @@ public class ServiceOrder {
     private String serviceType;
     
     // Origem da Manutencao (CARMARQ ou VALENTIM)
-    @Column(name = "manutencao_origin", length = 30)
+    @Column(name = "manutencao_origin")
     private String manutencaoOrigin;
-    
+
+    // Optimistic Locking: Protege contra condições de corrida em cálculos de totais e status
+    @Version
+    private Long version;
+
     // Número do Chamado Obrigatório
     @Column(name = "numero_chamado", length = 100, nullable = false)
     private String numeroChamado;
@@ -94,11 +98,36 @@ public class ServiceOrder {
     @Column(name = "discount_value")
     private Double discountValue = 0.0;
 
+    // Novos campos para separação de categoria (Fase 6)
+    @Builder.Default
+    @Column(name = "travel_value")
+    private Double travelValue = 0.0;
+
+    @Builder.Default
+    @Column(name = "displacement_value")
+    private Double displacementValue = 0.0;
+
 
 
     // Valor que será pago/transferido ao técnico (calculado automaticamente: 10% de serviceValue + expensesValue)
     // O total faturado (totalValue) também é calculado dinamicamente: serviceValue + expensesValue + partsValue
     // Estes campos não são mais persistidos diretamente no banco para garantir dinamismo.
+
+    @Builder.Default
+    @OneToMany(mappedBy = "serviceOrder", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<ServicePart> parts = new java.util.ArrayList<>();
+
+    @Builder.Default
+    @OneToMany(mappedBy = "serviceOrder", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<ServiceExpense> expenses = new java.util.ArrayList<>();
+
+    @Builder.Default
+    @OneToMany(mappedBy = "serviceOrder", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<ServicePhoto> photos = new java.util.ArrayList<>();
+
+    @Builder.Default
+    @OneToMany(mappedBy = "serviceOrder", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<TimeTracking> timeTrackings = new java.util.ArrayList<>();
 
     // Status do pagamento do técnico: A_RECEBER, PENDENTE_APROVACAO, REJEITADO ou RECEBIDO
     @Builder.Default

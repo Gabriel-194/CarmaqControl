@@ -51,11 +51,16 @@ public class ServiceOrderService {
 
         Page<ServiceOrder> ordersPage;
 
+        long start = System.currentTimeMillis();
         // Filtra por técnico se necessário, senão busca todas com filtros
         if ("TECNICO".equals(role)) {
             ordersPage = serviceOrderRepository.findWithFiltersTechnician(currentUser.getId(), search, status, month, year, pageable);
         } else {
             ordersPage = serviceOrderRepository.findWithFilters(search, status, month, year, pageable);
+        }
+        long duration = System.currentTimeMillis() - start;
+        if (duration > 500) {
+            System.err.println("[PERFORMANCE WARN] Busca de OS demorou " + duration + "ms para o usuário: " + currentUser.getNome());
         }
 
         return ordersPage.map(order -> mapToDTO(order, role));
@@ -113,7 +118,18 @@ public class ServiceOrderService {
                 .orElseThrow(() -> new RuntimeException("Técnico não encontrado com id " + technicianId));
 
         Double serviceValue = dto.getServiceValue() != null ? dto.getServiceValue() : 0.0;
-        
+        Double discountValue = dto.getDiscountValue() != null ? dto.getDiscountValue() : 0.0;
+        Double travelValue = dto.getTravelValue() != null ? dto.getTravelValue() : 0.0;
+        Double displacementValue = dto.getDisplacementValue() != null ? dto.getDisplacementValue() : 0.0;
+
+        // IDOR / Mass Assignment Fix: Técnico não define valores financeiros ou descontos na criação
+        if ("TECNICO".equals(role)) {
+            serviceValue = 0.0;
+            discountValue = 0.0;
+            travelValue = 0.0;
+            displacementValue = 0.0;
+        }
+
         // Regra de Negócio: OS de Instalação trava o valor pelo cadastro da máquina.
         if ("INSTALACAO".equals(dto.getServiceType())) {
             serviceValue = machine.getInstallationPrice() != null ? machine.getInstallationPrice() : 0.0;
@@ -134,26 +150,35 @@ public class ServiceOrderService {
                 .serviceValue(serviceValue)
                 .partsValue(0.0)
                 .expensesValue(0.0)
-                .discountValue(dto.getDiscountValue() != null ? dto.getDiscountValue() : 0.0)
+                .travelValue(travelValue)
+                .displacementValue(displacementValue)
+                .discountValue(discountValue)
                 .technicianPaymentStatus("A_RECEBER")
                 .build();
 
         order = serviceOrderRepository.save(order);
-        return mapToDTO(order, "PROPRIETARIO");
+        
+        // IDOR / Info Leak Fix: Retorna o DTO mapeado com a role do usuário atual
+        return mapToDTO(order, role);
     }
 
     // Calcula prévia de valores para o frontend sem persistir no banco
     @Transactional(readOnly = true)
     public ServiceOrderResponseDTO calculatePreview(ServiceOrderRequestDTO dto) {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        Usuario currentUser = (Usuario) auth.getPrincipal();
+
         // Mapeia DTO para entidade temporária (sem ID)
         ServiceOrder tempOrder = ServiceOrder.builder()
                 .serviceValue(dto.getServiceValue() != null ? dto.getServiceValue() : 0.0)
                 .discountValue(dto.getDiscountValue() != null ? dto.getDiscountValue() : 0.0)
+                .travelValue(0.0)
+                .displacementValue(0.0)
                 .expensesValue(0.0)
                 .partsValue(0.0) // No preview de criação, peças começam em zero
                 .build();
 
-        return mapToDTO(tempOrder, "PROPRIETARIO");
+        return mapToDTO(tempOrder, currentUser.getRole());
     }
 
     @Transactional
@@ -183,7 +208,17 @@ public class ServiceOrderService {
             order.setManutencaoOrigin(dto.getManutencaoOrigin());
         }
         
-        // Bloquear edição direta do ServiceValue se for manutenção
+        // Bloquear edição direta do ServiceValue se for manutenção ou se for TÉCNICO
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario currentUser = (Usuario) auth.getPrincipal();
+        String role = currentUser.getRole();
+
+        if ("TECNICO".equals(role)) {
+            // Técnicos não podem alterar valores financeiros nem descontos na atualização
+            dto.setServiceValue(null);
+            dto.setDiscountValue(null);
+        }
+
         if ("MANUTENCAO".equals(order.getServiceType())) {
             // ServiceValue é governado pelas horas registradas.
         } else if (dto.getServiceValue() != null) {
@@ -193,6 +228,9 @@ public class ServiceOrderService {
         if (dto.getDiscountValue() != null) {
             order.setDiscountValue(dto.getDiscountValue());
         }
+        
+        
+        // travelValue e displacementValue são atualizados via refreshLaborValue e refreshExpensesValue, não manualmente.
 
         // Atualiza o valor das peças (cacheado na entidade)
         refreshPartsValue(order);
@@ -203,7 +241,7 @@ public class ServiceOrderService {
 
     // Aprova o pagamento e transfere para o técnico
     @Transactional
-    public ServiceOrderResponseDTO approvePayment(Long orderId) {
+    public ServiceOrderResponseDTO approvePayment(Long orderId, Double discountValue) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Usuario currentUser = (Usuario) auth.getPrincipal();
 
@@ -218,7 +256,13 @@ public class ServiceOrderService {
             throw new RuntimeException("Este pagamento já foi aprovado e repassado");
         }
 
+        if (discountValue != null) {
+            order.setDiscountValue(discountValue);
+        }
+
         order.setTechnicianPaymentStatus("RECEBIDO");
+        order.setStatus("PAGO");
+        order.setClosedAt(LocalDateTime.now()); // Garante que a data de fechamento exista se não foi setada na conclusão
         order.setRejectionReason(null);
         order = serviceOrderRepository.save(order);
         return mapToDTO(order, currentUser.getRole());
@@ -245,14 +289,19 @@ public class ServiceOrderService {
 
     @Transactional
     public ServiceOrderResponseDTO updateServiceDescription(Long id, String description) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario currentUser = (Usuario) auth.getPrincipal();
+        
         ServiceOrder order = serviceOrderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ordem de serviço não encontrada com id " + id));
 
+        // IDOR Fix: Técnico só edita sua própria OS
+        if ("TECNICO".equals(currentUser.getRole()) && !order.getTechnician().getId().equals(currentUser.getId())) {
+            throw new RuntimeException("Acesso negado: Você não pode editar uma OS que não está atribuída a você.");
+        }
+
         order.setServiceDescription(description);
         order = serviceOrderRepository.save(order);
-        
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Usuario currentUser = (Usuario) auth.getPrincipal();
         
         return mapToDTO(order, currentUser.getRole());
     }
@@ -265,6 +314,11 @@ public class ServiceOrderService {
 
         ServiceOrder order = serviceOrderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ordem de serviço não encontrada com id " + id));
+
+        // IDOR Fix: Técnico só altera status da sua própria OS
+        if ("TECNICO".equals(currentUser.getRole()) && !order.getTechnician().getId().equals(currentUser.getId())) {
+             throw new RuntimeException("Acesso negado.");
+        }
 
         // Regra de Negócio: Admin só pode cancelar. Mudanças operacionais são para técnicos.
         if ("PROPRIETARIO".equals(currentUser.getRole())) {
@@ -284,7 +338,7 @@ public class ServiceOrderService {
         }
 
         order = serviceOrderRepository.save(order);
-        return mapToDTO(order, "PROPRIETARIO");
+        return mapToDTO(order, currentUser.getRole());
     }
 
     // Atualiza o cache de partsValue na entidade
@@ -294,63 +348,73 @@ public class ServiceOrderService {
         serviceOrderRepository.save(order);
     }
 
-    // Atualiza o cache de expensesValue na entidade
+    // Atualiza os caches de expensesValue e displacementValue na entidade
     public void refreshExpensesValue(ServiceOrder order) {
-        Double total = serviceExpenseRepository.sumTotalByServiceOrderId(order.getId());
-        order.setExpensesValue(total != null ? total : 0.0);
+        Double displacementTotal = serviceExpenseRepository.sumDisplacementByServiceOrderId(order.getId());
+        Double otherExpensesTotal = serviceExpenseRepository.sumOtherExpensesByServiceOrderId(order.getId());
+        
+        order.setDisplacementValue(displacementTotal != null ? displacementTotal : 0.0);
+        order.setExpensesValue(otherExpensesTotal != null ? otherExpensesTotal : 0.0);
         serviceOrderRepository.save(order);
     }
     
-    // Calcula as horas da Tabela de Tempo e reformula o valor do Serviço
+    // Calcula as horas da Tabela de Tempo e reformula o valor do Serviço/Viagem
     public void refreshLaborValue(ServiceOrder order, List<TimeTracking> times) {
-        if ("MANUTENCAO".equals(order.getServiceType())) {
-            // Valor padrão do serviço é calculado por horas
-            double rateTrabalho = 250.0; // CARMARQ
-            if ("VALENTIM".equals(order.getManutencaoOrigin())) {
-                rateTrabalho = 185.0;
-            }
-            
-            // Taxa de deslocamento
-            double rateDeslocamento = 85.0;
-            
-            long trabalhoMinutes = 0;
-            long deslocamentoMinutes = 0;
-
-            for (TimeTracking tt : times) {
-                 if (tt.getStartTime() != null && tt.getEndTime() != null) {
-                     long mins = java.time.Duration.between(tt.getStartTime(), tt.getEndTime()).toMinutes();
-                     if ("TRABALHO".equals(tt.getType())) {
-                         trabalhoMinutes += mins;
-                     } else {
-                         // Demais tempos (Saída/Retorno da Sede) entram como deslocamento
-                         deslocamentoMinutes += mins;
-                     }
-                 }
-            }
-            
-            double hrsTrabalho = trabalhoMinutes / 60.0;
-            double hrsDeslocamento = deslocamentoMinutes / 60.0;
-            
-            double totalLabor = (hrsTrabalho * rateTrabalho) + (hrsDeslocamento * rateDeslocamento);
-            order.setServiceValue(Math.round(totalLabor * 100.0) / 100.0);
-            serviceOrderRepository.save(order);
+        // Valor padrão do serviço é calculado por horas (apenas para MANUTENCAO)
+        double rateTrabalho = 250.0; // CARMARQ
+        if ("VALENTIM".equals(order.getManutencaoOrigin())) {
+            rateTrabalho = 185.0;
         }
+        
+        // Taxa de deslocamento (Sempre aplicada)
+        double rateDeslocamento = 85.0;
+        
+        long trabalhoMinutes = 0;
+        long deslocamentoMinutes = 0;
+
+        for (TimeTracking tt : times) {
+             if (tt.getStartTime() != null && tt.getEndTime() != null) {
+                 long mins = java.time.Duration.between(tt.getStartTime(), tt.getEndTime()).toMinutes();
+                 if ("TRABALHO".equals(tt.getType())) {
+                     trabalhoMinutes += mins;
+                 } else {
+                     deslocamentoMinutes += mins;
+                 }
+             }
+        }
+        
+        double hrsTrabalho = trabalhoMinutes / 60.0;
+        double hrsDeslocamento = deslocamentoMinutes / 60.0;
+        
+        // travelValue é sempre baseado em horas de deslocamento
+        double travelOnly = hrsDeslocamento * rateDeslocamento;
+        order.setTravelValue(Math.round(travelOnly * 100.0) / 100.0);
+        
+        // serviceValue só é recalculado se for MANUTENCAO (Instalação é fixo)
+        if ("MANUTENCAO".equals(order.getServiceType())) {
+            double laborOnly = hrsTrabalho * rateTrabalho;
+            order.setServiceValue(Math.round(laborOnly * 100.0) / 100.0);
+        }
+        
+        serviceOrderRepository.save(order);
     }
 
     // Cálculos Dinâmicos (Não persistidos)
     public Double calculateTotal(ServiceOrder order) {
         Double discount = (order.getDiscountValue() != null ? order.getDiscountValue() : 0.0);
         return (order.getServiceValue() != null ? order.getServiceValue() : 0.0) +
+               (order.getTravelValue() != null ? order.getTravelValue() : 0.0) +
+               (order.getDisplacementValue() != null ? order.getDisplacementValue() : 0.0) +
                (order.getPartsValue() != null ? order.getPartsValue() : 0.0) +
                (order.getExpensesValue() != null ? order.getExpensesValue() : 0.0) - discount;
     }
 
     public Double calculateTechnicianPayment(ServiceOrder order) {
-        Double serviceBase = (order.getServiceValue() != null ? order.getServiceValue() : 0.0);
-        Double expenses = (order.getExpensesValue() != null ? order.getExpensesValue() : 0.0);
-        
-        // Pagamento do técnico: 10% da Mão de Obra + 100% das Despesas (para todos os tipos de serviço)
-        return (serviceBase * 0.10) + expenses;
+        // Regra Fase 6: Repasse de 10% estritamente sobre Mão de Obra e Tempo de Viagem.
+        // Km (Displacement), Peças e Demais Despesas Reembolsáveis são excluídas da comissão.
+        Double commissionBase = (order.getServiceValue() != null ? order.getServiceValue() : 0.0) +
+                                (order.getTravelValue() != null ? order.getTravelValue() : 0.0);
+        return commissionBase * 0.10;
     }
 
 
@@ -386,11 +450,15 @@ public class ServiceOrderService {
 
         // Controle de visibilidade baseado na role
         if ("TECNICO".equals(role)) {
-            builder.technicianPayment(techPayment);
-            // Demais valores financeiros ficam nulos para o técnico
+            builder.technicianPayment(techPayment)
+                   .serviceValue(order.getServiceValue())
+                   .travelValue(order.getTravelValue());
+            // Demais valores financeiros (Peças, Km, Despesas Gerais e Lucro) ficam nulos para o técnico
         } else {
             // PROPRIETARIO e FINANCEIRO veem tudo
             builder.serviceValue(order.getServiceValue())
+                    .travelValue(order.getTravelValue())
+                    .displacementValue(order.getDisplacementValue())
                     .partsValue(order.getPartsValue())
                     .expensesValue(order.getExpensesValue())
                     .discountValue(order.getDiscountValue())
@@ -415,32 +483,51 @@ public class ServiceOrderService {
     // =========================================================================
 
     public com.example.DTOs.ServiceOrderSuggestionDTO generateSuggestions(Long machineId) {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        Usuario currentUser = (Usuario) auth.getPrincipal();
+
+        // BOLA Check: Técnico só vê sugestões de máquinas que já atendeu
+        if ("TECNICO".equals(currentUser.getRole())) {
+            boolean hasHistory = serviceOrderRepository.existsByTechnicianIdAndMachineId(currentUser.getId(), machineId);
+            if (!hasHistory) {
+                throw new org.springframework.security.access.AccessDeniedException("Você não tem permissão para acessar sugestões para esta máquina.");
+            }
+        }
+
         Machine machine = machineRepository.findById(machineId)
                 .orElseThrow(() -> new RuntimeException("Máquina não encontrada com id " + machineId));
 
+        double hourlyRate = 250.0; // Padrão
+        double estHours = 2.0;
+
         return com.example.DTOs.ServiceOrderSuggestionDTO.builder()
                 .suggestedServiceType("MANUTENCAO")
-                .estimatedHours(2.0)
-                .hourlyRate(250.0)
-                .estimatedServiceValue(500.0)
-                .estimatedTechnicianPayment(50.0)
+                .estimatedHours(estHours)
+                .hourlyRate(hourlyRate)
+                .estimatedServiceValue(hourlyRate * estHours)
+                .estimatedTechnicianPayment((hourlyRate * estHours) * 0.1)
                 .machineType(machine.getMachineType() != null ? machine.getMachineType().name() : "Desconhecido")
                 .machineModel(machine.getModel())
-                .machineBrand("-")
-                .machineDescription("-")
-                .autoObservation("Sugestão automática gerada com sucesso.")
+                .autoObservation("Sugestão de manutenção preventiva.")
                 .build();
     }
 
     @org.springframework.transaction.annotation.Transactional
     public ServiceOrderResponseDTO markAsReceived(Long id) {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        Usuario currentUser = (Usuario) auth.getPrincipal();
+        
         ServiceOrder order = serviceOrderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ordem de serviço não encontrada com id " + id));
+                
+        // IDOR Fix
+        if ("TECNICO".equals(currentUser.getRole()) && !order.getTechnician().getId().equals(currentUser.getId())) {
+            throw new RuntimeException("Acesso negado.");
+        }
+
         order.setTechnicianPaymentStatus("RECEBIDO");
         order = serviceOrderRepository.save(order);
         
-        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        Usuario currentUser = (Usuario) auth.getPrincipal();
         return mapToDTO(order, currentUser.getRole());
     }
 }

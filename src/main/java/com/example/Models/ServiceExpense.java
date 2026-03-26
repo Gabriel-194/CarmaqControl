@@ -8,7 +8,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "service_expenses")
+@Table(name = "service_expenses", indexes = {
+    @Index(name = "idx_expense_so", columnList = "service_order_id")
+})
 @Data
 @Builder
 @NoArgsConstructor

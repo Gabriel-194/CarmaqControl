@@ -55,9 +55,9 @@ public class ServicePhotoService {
         ServiceOrder order = serviceOrderRepository.findById(serviceOrderId)
                 .orElseThrow(() -> new RuntimeException("Ordem de serviço não encontrada com id " + serviceOrderId));
 
-        // Validação de workflow: só permite upload de fotos se EM_ANDAMENTO
-        if (!"EM_ANDAMENTO".equals(order.getStatus())) {
-            throw new RuntimeException("Fotos só podem ser enviadas quando a OS está EM_ANDAMENTO");
+        // Validação de workflow: permite fotos em qualquer estado, exceto se já estiver CONCLUIDO ou PAGO.
+        if ("CONCLUIDA".equals(order.getStatus()) || "PAGO".equals(order.getStatus())) {
+            throw new RuntimeException("Fotos não podem ser enviadas para uma OS CONCLUÍDA ou PAGA");
         }
 
         // Sanitiza o nome do arquivo e gera nome único
@@ -90,7 +90,11 @@ public class ServicePhotoService {
         ServicePhoto photo = servicePhotoRepository.findById(photoId)
                 .orElseThrow(() -> new RuntimeException("Foto não encontrada com id " + photoId));
         
-        validateOsOwnership(photo.getServiceOrder().getId());
+        // Validação de workflow: permite exclusão de fotos em qualquer estado, exceto se já estiver CONCLUIDO ou PAGO.
+        ServiceOrder order = photo.getServiceOrder();
+        if ("CONCLUIDA".equals(order.getStatus()) || "PAGO".equals(order.getStatus())) {
+            throw new RuntimeException("Fotos não podem ser excluídas de uma OS CONCLUÍDA ou PAGA");
+        }
 
         // Remove o arquivo do disco
         Path filePath = Paths.get(photo.getFilePath());

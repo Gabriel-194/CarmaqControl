@@ -88,33 +88,44 @@ public class DashboardService {
                     final int m = month;
                     builder.completedOrders(serviceOrderRepository.countByStatusAndMonthAndYear("CONCLUIDA", m, y))
                             .cancelledOrders(serviceOrderRepository.countByStatusAndMonthAndYear("CANCELADA", m, y))
+                            .comProblemaOrders(serviceOrderRepository.countByStatusAndMonthAndYear("COM_PROBLEMA", m, y))
                             .pendingApprovalPayments(serviceOrderRepository.countPendingApprovalPaymentsByMonthAndYear(m, y));
 
                     builder.totalRevenue(serviceOrderRepository.sumTotalValueByMonthAndYear(m, y));
                     
                     Double revenue = builder.build().getTotalRevenue() != null ? builder.build().getTotalRevenue() : 0.0;
-                    Double techPayments = serviceOrderRepository.sumTechnicianPaymentByMonthAndYear(m, y);
-                    techPayments = techPayments != null ? techPayments : 0.0;
-                    builder.totalExpenses(techPayments);
-                    builder.totalProfit(revenue - techPayments);
+                    Double techCommissions = serviceOrderRepository.sumTechnicianPaymentByMonthAndYear(m, y);
+                    techCommissions = techCommissions != null ? techCommissions : 0.0;
+                    Double reimbursements = serviceOrderRepository.sumTotalReimbursementsByMonthAndYear(m, y);
+                    reimbursements = reimbursements != null ? reimbursements : 0.0;
+                    
+                    Double totalExp = techCommissions + reimbursements;
+                    builder.totalExpenses(totalExp);
+                    builder.totalProfit(revenue - totalExp); 
                 } else {
                     // "Todos os meses" do ano
                     builder.completedOrders(serviceOrderRepository.countByStatusAndYear("CONCLUIDA", y))
                             .cancelledOrders(serviceOrderRepository.countByStatusAndYear("CANCELADA", y))
+                            .comProblemaOrders(serviceOrderRepository.countByStatusAndYear("COM_PROBLEMA", y))
                             .pendingApprovalPayments(serviceOrderRepository.countPendingApprovalPaymentsByYear(y));
 
                     builder.totalRevenue(serviceOrderRepository.sumTotalValueByYear(y));
                     
                     Double revenue = builder.build().getTotalRevenue() != null ? builder.build().getTotalRevenue() : 0.0;
-                    Double techPayments = serviceOrderRepository.sumTechnicianPaymentByYear(y);
-                    techPayments = techPayments != null ? techPayments : 0.0;
-                    builder.totalExpenses(techPayments);
-                    builder.totalProfit(revenue - techPayments);
+                    Double techCommissions = serviceOrderRepository.sumTechnicianPaymentByYear(y);
+                    techCommissions = techCommissions != null ? techCommissions : 0.0;
+                    Double reimbursements = serviceOrderRepository.sumTotalReimbursementsByYear(y);
+                    reimbursements = reimbursements != null ? reimbursements : 0.0;
+                    
+                    Double totalExp = techCommissions + reimbursements;
+                    builder.totalExpenses(totalExp);
+                    builder.totalProfit(revenue - totalExp); 
                 }
                 
                 builder.totalOrders(serviceOrderRepository.count()) 
                         .openOrders(serviceOrderRepository.countByStatus("ABERTA"))
                         .inProgressOrders(serviceOrderRepository.countByStatus("EM_ANDAMENTO"))
+                        .comProblemaOrders(serviceOrderRepository.countByStatus("COM_PROBLEMA"))
                         .requiresInspectionOrders(serviceOrderRepository.countByStatus("REQUER_INSPECAO"));
                 
                 builder.monthlyRevenue(builder.build().getTotalRevenue());
@@ -125,6 +136,7 @@ public class DashboardService {
                         .inProgressOrders(serviceOrderRepository.countByStatus("EM_ANDAMENTO"))
                         .completedOrders(serviceOrderRepository.countByStatus("CONCLUIDA"))
                         .cancelledOrders(serviceOrderRepository.countByStatus("CANCELADA"))
+                        .comProblemaOrders(serviceOrderRepository.countByStatus("COM_PROBLEMA"))
                         .requiresInspectionOrders(serviceOrderRepository.countByStatus("REQUER_INSPECAO"))
                         .pendingApprovalPayments(serviceOrderRepository.countPendingApprovalPayments());
 
@@ -133,9 +145,14 @@ public class DashboardService {
                 builder.pendingPayments(serviceOrderRepository.sumTotalValuePending());
                 
                 Double revenue = builder.build().getTotalRevenue() != null ? builder.build().getTotalRevenue() : 0.0;
-                Double totalTechPayments = serviceOrderRepository.sumTotalTechnicianPaymentCompleted();
-                builder.totalExpenses(totalTechPayments);
-                builder.totalProfit(revenue - totalTechPayments); 
+                Double totalTechCommissions = serviceOrderRepository.sumTotalTechnicianPaymentCompleted();
+                totalTechCommissions = totalTechCommissions != null ? totalTechCommissions : 0.0;
+                Double totalReimbursements = serviceOrderRepository.sumTotalReimbursementsCompleted();
+                totalReimbursements = totalReimbursements != null ? totalReimbursements : 0.0;
+                
+                Double totalExp = totalTechCommissions + totalReimbursements;
+                builder.totalExpenses(totalExp);
+                builder.totalProfit(revenue - totalExp); 
             }
             
             if ("PROPRIETARIO".equals(role)) {

@@ -5,6 +5,7 @@ export const statusMap = {
     CANCELADA:       { label: 'Cancelada',        css: 'status-cancelada' },
     COM_PROBLEMA:    { label: 'Com Problema',     css: 'status-cancelada' },
     REQUER_INSPECAO: { label: 'Requer Inspeção',  css: 'status-inspecao' },
+    PAGO:            { label: 'Pago',             css: 'status-concluido' },
 }
 
 export const serviceTypeLabels = {

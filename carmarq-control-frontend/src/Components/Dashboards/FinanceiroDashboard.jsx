@@ -86,16 +86,16 @@ export function FinanceiroDashboard() {
                         <DollarSign className="stat-icon" size={20} color="#10b981" />
                     </div>
                     <span className="stat-value" style={{ color: '#10b981' }}>{formatCurrency(stats.totalRevenue)}</span>
-                    <span className="stat-desc">Bruto de serviços concluídos</span>
+                    <span className="stat-desc">Bruto (MoO, Viagem, Km, Peças e Desp)</span>
                 </div>
 
                 <div className="stat-card" style={{ borderLeft: '4px solid #ef4444' }}>
                     <div className="stat-header">
-                        <span className="stat-title">Despesas (Técnicos)</span>
+                        <span className="stat-title">Custos Operacionais</span>
                         <DollarSign className="stat-icon" size={20} color="#ef4444" style={{ transform: 'rotate(180deg)' }} />
                     </div>
                     <span className="stat-value" style={{ color: '#ef4444' }}>- {formatCurrency(stats.totalExpenses)}</span>
-                    <span className="stat-desc">Repasses aos técnicos</span>
+                    <span className="stat-desc">Repasses + Reembolsos integrais</span>
                 </div>
 
                 <div className="stat-card" style={{ borderLeft: '4px solid #10b981' }}>
@@ -123,6 +123,15 @@ export function FinanceiroDashboard() {
                     </div>
                     <span className="stat-value">{stats.requiresInspectionOrders || 0}</span>
                     <span className="stat-desc" style={{ color: '#ef4444' }}>Necessitam atenção</span>
+                </div>
+
+                <div className="stat-card" style={{ borderLeft: '4px solid #ef4444' }}>
+                    <div className="stat-header">
+                        <span className="stat-title">Com Problema</span>
+                        <AlertCircle className="stat-icon" size={20} color="#ef4444" />
+                    </div>
+                    <span className="stat-value">{stats.comProblemaOrders || 0}</span>
+                    <span className="stat-desc" style={{ color: '#ef4444' }}>Bloqueadas para pagamento</span>
                 </div>
             </div>
 

@@ -15,7 +15,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "time_trackings")
+@Table(name = "time_trackings", indexes = {
+    @Index(name = "idx_time_so", columnList = "service_order_id")
+})
 public class TimeTracking {
 
     @Id

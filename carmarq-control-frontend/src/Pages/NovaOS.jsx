@@ -102,7 +102,9 @@ export default function NovaOS() {
                 const payload = {
                     clientId: formData.clienteId ? parseInt(formData.clienteId) : null,
                     machineId: formData.maquinaId ? parseInt(formData.maquinaId) : null,
-                    serviceValue: formData.valorServico ? parseFloat(formData.valorServico) : 0
+                    serviceValue: formData.valorServico ? parseFloat(formData.valorServico) : 0,
+                    travelValue: 0,
+                    displacementValue: 0
                 }
                 const res = await axios.post(`${API_BASE}/service-orders/preview`, payload, { withCredentials: true })
                 setPreviewData(res.data)
@@ -113,7 +115,7 @@ export default function NovaOS() {
 
         const timer = setTimeout(fetchPreview, 500) // Debounce de 500ms
         return () => clearTimeout(timer)
-    }, [formData.clienteId, formData.maquinaId, formData.valorServico])
+    }, [formData.clienteId, formData.maquinaId, formData.valorServico, formData.valorViagem, formData.valorDeslocamento])
 
     // Quando a máquina muda, busca sugestões e atualiza valor de instalação se já selecionado
     const handleMachineChange = (machineId) => {
@@ -442,11 +444,23 @@ export default function NovaOS() {
                                             <span className="value">R$ {(previewData.serviceValue || 0).toFixed(2)}</span>
                                         </div>
                                         <div className="finance-line">
-                                            <span>Despesas</span>
+                                            <span>Viagem (Tempo)</span>
+                                            <span className="value">R$ {(previewData.travelValue || 0).toFixed(2)}</span>
+                                        </div>
+                                        <div className="finance-line">
+                                            <span>Deslocamento (Km)</span>
+                                            <span className="value">R$ {(previewData.displacementValue || 0).toFixed(2)}</span>
+                                        </div>
+                                        <div className="finance-line">
+                                            <span>Peças</span>
+                                            <span className="value">R$ {(previewData.partsValue || 0).toFixed(2)}</span>
+                                        </div>
+                                        <div className="finance-line">
+                                            <span>Despesas extras</span>
                                             <span className="value">R$ {(previewData.expensesValue || 0).toFixed(2)}</span>
                                         </div>
-                                        <div className="finance-line" style={{ color: '#ef4444' }}>
-                                            <span>Pgto Técnico (Despesa 10%)</span>
+                                        <div className="finance-line" style={{ color: '#ef4444', borderTop: '1px dashed #eee', marginTop: '0.5rem', paddingTop: '0.5rem' }}>
+                                            <span>Pgto Técnico (10% sobre Serviços)</span>
                                             <span className="value">- R$ {(previewData.technicianPayment || 0).toFixed(2)}</span>
                                         </div>
                                         <div className="finance-line total-line">

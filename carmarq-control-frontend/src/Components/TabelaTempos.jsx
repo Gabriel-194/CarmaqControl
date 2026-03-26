@@ -10,7 +10,6 @@ const API_URL = 'http://localhost:8080/api/service-orders'
 export default function TabelaTempos({ serviceOrderId, userRole, osTipo, onUpdate }) {
     const [registros, setRegistros] = useState([])
     const [loading, setLoading] = useState(true)
-    const [isTimerRunning, setIsTimerRunning] = useState(false)
     const [timerType, setTimerType] = useState('TRABALHO')
     const [showManual, setShowManual] = useState(false)
     const [isEditing, setIsEditing] = useState(false)
@@ -30,10 +29,6 @@ export default function TabelaTempos({ serviceOrderId, userRole, osTipo, onUpdat
             const res = await axios.get(`${API_URL}/${serviceOrderId}/times`, { withCredentials: true })
             setRegistros(res.data.records || [])
             setTotalFormatted(res.data.totalFormatted || '00:00')
-            
-            // Verifica se há algum timer rodando (sem endTime)
-            const hasRunning = (res.data.records || []).some(r => !r.endTime)
-            setIsTimerRunning(hasRunning)
         } catch (error) {
             console.error('Erro ao carregar tempos', error)
         } finally {
@@ -45,41 +40,6 @@ export default function TabelaTempos({ serviceOrderId, userRole, osTipo, onUpdat
         if (serviceOrderId) fetchTimes()
     }, [serviceOrderId])
 
-    // Inicia um cronômetro (registra hora de início)
-    const handleStartTimer = async () => {
-        try {
-            await axios.post(`${API_URL}/${serviceOrderId}/times`, {
-                type: timerType,
-                registeredDate: new Date().toISOString().split('T')[0],
-                startTime: new Date().toISOString(),
-                description: 'Atividade em andamento'
-            }, { withCredentials: true })
-            setIsTimerRunning(true)
-            toast('Cronômetro iniciado!', 'success')
-            fetchTimes()
-            if (onUpdate) onUpdate()
-        } catch (error) {
-            toast('Erro ao iniciar cronômetro.', 'error')
-        }
-    }
-
-    // Para o cronômetro mais recente sem endTime
-    const handleStopTimer = async () => {
-        const running = registros.find(r => !r.endTime)
-        if (running) {
-            try {
-                await axios.put(`${API_URL}/${serviceOrderId}/times/${running.id}`, {
-                    endTime: new Date().toISOString()
-                }, { withCredentials: true })
-                setIsTimerRunning(false)
-                toast('Atividade finalizada!', 'success')
-                fetchTimes()
-                if (onUpdate) onUpdate()
-            } catch (error) {
-                toast('Erro ao parar cronômetro.', 'error')
-            }
-        }
-    }
 
     // Edição de registro existente
     const handleEditClick = (reg) => {
@@ -162,40 +122,32 @@ export default function TabelaTempos({ serviceOrderId, userRole, osTipo, onUpdat
         )
     }
 
+    const isOrderLocked = registros.some(r => r.orderStatus === 'PAGO' || r.orderStatus === 'CANCELADA') 
+        || (registros.length > 0 && registros[0].orderStatus === 'PAGO'); 
+    // Nota: O backend já valida, mas aqui no UI usamos a prop orderStatus se disponível ou checamos via osTipo se necessário.
+    // Na verdade, OrdemDetalhes passa orderStatus? Não, passa userRole e osTipo.
+    // Vou adicionar a prop 'orderStatus' no OrdemDetalhes.jsx para facilitar aqui.
+
     return (
         <div className="times-container">
             {userRole === 'TECNICO' && (
                 <div className="timer-control" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                    {!isTimerRunning ? (
-                        <>
-                            <select 
-                                className="form-input" 
-                                style={{ width: 'auto', margin: 0 }}
-                                value={timerType}
-                                onChange={e => setTimerType(e.target.value)}
-                            >
-                                <option value="SAIDA_SEDE">Saída da Sede</option>
-                                <option value="TRABALHO">Trabalho</option>
-                                <option value="RETORNO_SEDE">Retorno à Sede</option>
-                            </select>
-                            <button className="btn-timer btn-start" onClick={handleStartTimer}>
-                                <Play size={20} /> Iniciar Cronômetro
-                            </button>
-                        </>
-                    ) : (
-                        <button className="btn-timer btn-stop" onClick={handleStopTimer}>
-                            <Square size={20} /> Parar Atividade
-                        </button>
-                    )}
-
-                    <button className="btn-secondary btn-manual" onClick={() => {
-                        setIsEditing(false)
-                        setEditingId(null)
-                        setManualData({ type: 'TRABALHO', registeredDate: new Date().toISOString().split('T')[0], startTime: '', endTime: '', description: '' })
-                        setShowManual(!showManual)
-                    }}>
-                        <Plus size={16} /> Lançamento Manual
+                    <button 
+                        className="btn-primary" 
+                        onClick={() => {
+                            setIsEditing(false)
+                            setEditingId(null)
+                            setManualData({ type: 'TRABALHO', registeredDate: new Date().toISOString().split('T')[0], startTime: '', endTime: '', description: '' })
+                            setShowManual(!showManual)
+                        }}
+                    >
+                        <Plus size={16} /> {showManual ? 'Cancelar Lançamento' : 'Novo Lançamento de Tempo'}
                     </button>
+                    {!showManual && (
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>
+                            O cronômetro automático foi removido. Utilize o lançamento manual para registrar suas horas.
+                        </p>
+                    )}
                 </div>
             )}
 

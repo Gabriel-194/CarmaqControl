@@ -14,7 +14,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "service_photos")
+@Table(name = "service_photos", indexes = {
+    @Index(name = "idx_photo_so", columnList = "service_order_id")
+})
 public class ServicePhoto {
 
     @Id

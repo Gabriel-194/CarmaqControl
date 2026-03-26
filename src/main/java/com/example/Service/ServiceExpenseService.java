@@ -55,8 +55,18 @@ public class ServiceExpenseService {
 
         validateOwnership(order);
 
-        if (!"EM_ANDAMENTO".equals(order.getStatus())) {
-            throw new RuntimeException("Só é possível adicionar despesas em OS com status EM_ANDAMENTO");
+        // Técnicos não podem adicionar despesas após CONCLUIDA.
+        // Proprietário/Financeiro só são bloqueados em PAGO ou CANCELADA.
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario currentUser = (Usuario) auth.getPrincipal();
+        String role = currentUser.getRole();
+
+        if ("PAGO".equals(order.getStatus()) || "CANCELADA".equals(order.getStatus())) {
+            throw new RuntimeException("Não é possível adicionar despesas em uma OS com status " + order.getStatus());
+        }
+        
+        if ("CONCLUIDA".equals(order.getStatus()) && "TECNICO".equals(role)) {
+            throw new RuntimeException("Técnicos não podem adicionar despesas após a conclusão da OS.");
         }
 
         ServiceExpense expense = ServiceExpense.builder()
@@ -95,8 +105,16 @@ public class ServiceExpenseService {
 
         validateOwnership(order);
 
-        if (!"EM_ANDAMENTO".equals(order.getStatus())) {
-            throw new RuntimeException("Só é possível remover despesas em OS com status EM_ANDAMENTO");
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario currentUser = (Usuario) auth.getPrincipal();
+        String role = currentUser.getRole();
+
+        if ("PAGO".equals(order.getStatus()) || "CANCELADA".equals(order.getStatus())) {
+            throw new RuntimeException("Não é possível remover despesas em uma OS com status " + order.getStatus());
+        }
+
+        if ("CONCLUIDA".equals(order.getStatus()) && "TECNICO".equals(role)) {
+            throw new RuntimeException("Técnicos não podem remover despesas após a conclusão da OS.");
         }
 
         ServiceExpense expense = serviceExpenseRepository.findById(expenseId)
@@ -108,6 +126,57 @@ public class ServiceExpenseService {
 
         serviceExpenseRepository.delete(expense);
         serviceOrderService.refreshExpensesValue(order);
+    }
+
+    @Transactional
+    public ServiceExpenseResponseDTO updateExpense(Long serviceOrderId, Long expenseId, ServiceExpenseRequestDTO dto) {
+        ServiceOrder order = serviceOrderRepository.findById(serviceOrderId)
+                .orElseThrow(() -> new RuntimeException("Ordem de serviço não encontrada"));
+
+        validateOwnership(order);
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario currentUser = (Usuario) auth.getPrincipal();
+        String role = currentUser.getRole();
+
+        if ("PAGO".equals(order.getStatus()) || "CANCELADA".equals(order.getStatus())) {
+            throw new RuntimeException("Não é possível editar despesas em uma OS com status " + order.getStatus());
+        }
+
+        if ("CONCLUIDA".equals(order.getStatus()) && "TECNICO".equals(role)) {
+            throw new RuntimeException("Técnicos não podem editar despesas após a conclusão da OS.");
+        }
+
+        ServiceExpense expense = serviceExpenseRepository.findById(expenseId)
+                .orElseThrow(() -> new RuntimeException("Despesa não encontrada"));
+
+        if (!expense.getServiceOrder().getId().equals(serviceOrderId)) {
+            throw new RuntimeException("Esta despesa não pertence a esta OS");
+        }
+
+        expense.setExpenseType(dto.getExpenseType());
+        if (dto.getExpenseType() == ExpenseTypeEnum.DESLOCAMENTO_KM) {
+            if (dto.getQuantityKm() == null) {
+                throw new RuntimeException("Quantidade de Km é obrigatória para despesas de deslocamento");
+            }
+            expense.setQuantityKm(dto.getQuantityKm());
+            expense.setValue(dto.getQuantityKm() * 2.20);
+        } else {
+            if (dto.getValue() == null) {
+                throw new RuntimeException("Valor é obrigatório para este tipo de despesa");
+            }
+            if (dto.getExpenseType() == ExpenseTypeEnum.OUTRO && (dto.getDescription() == null || dto.getDescription().isBlank())) {
+                throw new RuntimeException("Descrição é obrigatória para despesas do tipo OUTRO");
+            }
+            expense.setValue(dto.getValue());
+            expense.setQuantityKm(null);
+        }
+        expense.setDescription(dto.getDescription());
+
+        expense = serviceExpenseRepository.save(expense);
+        serviceOrderService.refreshExpensesValue(order);
+
+        return mapToDTO(expense);
     }
 
     private void validateOwnership(ServiceOrder order) {

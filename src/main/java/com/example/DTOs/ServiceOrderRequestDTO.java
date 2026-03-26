@@ -57,4 +57,8 @@ public class ServiceOrderRequestDTO {
 
     // Valor de desconto opcional na ordem de serviço
     private Double discountValue;
+
+    // Novos campos de custo (Fase 6)
+    private Double travelValue;
+    private Double displacementValue;
 }

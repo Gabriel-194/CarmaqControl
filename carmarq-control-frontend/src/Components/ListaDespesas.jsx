@@ -1,18 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from './ui/Toaster';
-import { Trash2, Plus, Receipt, Loader2, DollarSign } from 'lucide-react';
+import { Trash2, Plus, Receipt, Loader2, DollarSign, PenTool, CheckCircle, Lock } from 'lucide-react';
 import { expenseTypeLabels } from '../utils/statusUtils';
 import '../Styles/ListaDespesas.css';
 
 const API_URL = 'http://localhost:8080/api/service-orders';
 
-export default function ListaDespesas({ serviceOrderId, orderStatus, onUpdate }) {
+export default function ListaDespesas({ serviceOrderId, orderStatus, userRole, onUpdate }) {
     const [despesas, setDespesas] = useState([]);
     const [totalValue, setTotalValue] = useState(0);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     
+    // Estados para edição
+    const [isEditing, setIsEditing] = useState(false);
+    const [editingId, setEditingId] = useState(null);
+
     const [formData, setFormData] = useState({
         expenseType: 'DESLOCAMENTO_KM',
         quantityKm: '',
@@ -20,7 +24,12 @@ export default function ListaDespesas({ serviceOrderId, orderStatus, onUpdate })
         description: ''
     });
 
-    const isEditable = orderStatus === 'EM_ANDAMENTO';
+    const isAdmin = userRole === 'PROPRIETARIO' || userRole === 'FINANCEIRO';
+    const isLocked = orderStatus === 'PAGO' || orderStatus === 'CANCELADA';
+    
+    // Novo: Proprietário e Financeiro podem editar se não estiver PAGO ou CANCELADA.
+    // Técnico só pode editar se estiver EM_ANDAMENTO.
+    const isEditable = isAdmin ? !isLocked : orderStatus === 'EM_ANDAMENTO';
 
     const fetchDespesas = async () => {
         try {
@@ -42,8 +51,9 @@ export default function ListaDespesas({ serviceOrderId, orderStatus, onUpdate })
         }
     }, [serviceOrderId]);
 
-    const handleAddExpense = async (e) => {
-        e.preventDefault();
+    const handleSave = async (e) => {
+        if (e) e.preventDefault();
+        if (isLocked) return;
         
         let val = parseFloat(formData.value);
         let qty = formData.expenseType === 'DESLOCAMENTO_KM' ? parseFloat(formData.quantityKm) : null;
@@ -57,33 +67,64 @@ export default function ListaDespesas({ serviceOrderId, orderStatus, onUpdate })
             toast('Para deslocamento, informe a quantidade de KM.', 'error');
             return;
         }
+        
+        if (formData.expenseType === 'OUTRO' && (!formData.description || formData.description.trim() === '')) {
+            toast('Descrição é obrigatória para despesas do tipo OUTRO.', 'error');
+            return;
+        }
 
         setSubmitting(true);
         try {
-            await axios.post(`${API_URL}/${serviceOrderId}/expenses`, {
+            const payload = {
                 expenseType: formData.expenseType,
                 quantityKm: qty,
                 value: val,
                 description: formData.description
-            }, { withCredentials: true });
+            };
+
+            if (isEditing) {
+                await axios.put(`${API_URL}/${serviceOrderId}/expenses/${editingId}`, payload, { withCredentials: true });
+                toast('Despesa atualizada com sucesso!', 'success');
+            } else {
+                await axios.post(`${API_URL}/${serviceOrderId}/expenses`, payload, { withCredentials: true });
+                toast('Despesa adicionada com sucesso!', 'success');
+            }
             
-            toast('Despesa adicionada com sucesso!', 'success');
-            setFormData({
-                expenseType: 'DESLOCAMENTO_KM',
-                quantityKm: '',
-                value: '',
-                description: ''
-            });
+            resetForm();
             fetchDespesas();
             if (onUpdate) onUpdate();
         } catch (error) {
-            toast(error.response?.data?.message || 'Erro ao adicionar despesa.', 'error');
+            toast(error.response?.data?.message || 'Erro ao salvar despesa.', 'error');
         } finally {
             setSubmitting(false);
         }
     };
 
+    const resetForm = () => {
+        setFormData({
+            expenseType: 'DESLOCAMENTO_KM',
+            quantityKm: '',
+            value: '',
+            description: ''
+        });
+        setIsEditing(false);
+        setEditingId(null);
+    };
+
+    const handleEditClick = (d) => {
+        setFormData({
+            expenseType: d.expenseType,
+            quantityKm: d.quantityKm || '',
+            value: d.value,
+            description: d.description || ''
+        });
+        setEditingId(d.id);
+        setIsEditing(true);
+        window.scrollTo({ top: 300, behavior: 'smooth' });
+    };
+
     const handleDelete = async (expenseId) => {
+        if (isLocked) return;
         if (!window.confirm('Deseja realmente excluir esta despesa?')) return;
         
         try {
@@ -102,12 +143,13 @@ export default function ListaDespesas({ serviceOrderId, orderStatus, onUpdate })
 
     return (
         <div className="lista-despesas-container">
-            {isEditable && (
-                <div className="despesa-form-card">
-                    <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                        <Plus size={16} /> Lançar Nova Despesa
+            {isEditable && !isLocked ? (
+                <div className="despesa-form-card" style={{ border: isEditing ? '1px solid var(--primary-color)' : 'none', backgroundColor: isEditing ? '#f0fdf4' : 'white' }}>
+                    <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: isEditing ? 'var(--primary-color)' : 'inherit' }}>
+                        {isEditing ? <PenTool size={16} /> : <Plus size={16} />} 
+                        {isEditing ? 'Editando Despesa' : 'Lançar Nova Despesa'}
                     </h4>
-                    <form onSubmit={handleAddExpense} className="despesa-form">
+                    <form onSubmit={handleSave} className="despesa-form">
                         <div className="despesa-row">
                             <div className="form-group" style={{ flex: 1 }}>
                                 <label>Tipo de Despesa</label>
@@ -158,26 +200,54 @@ export default function ListaDespesas({ serviceOrderId, orderStatus, onUpdate })
                         </div>
 
                         <div className="form-group">
-                            <label>Descrição Opcional</label>
+                            <label>
+                                {formData.expenseType === 'OUTRO' ? 'Descrição (Obrigatória)' : 'Descrição Opcional'}
+                            </label>
                             <input 
                                 type="text" 
                                 className="form-input" 
-                                placeholder="Detalhes adicionais do gasto..."
+                                style={formData.expenseType === 'OUTRO' ? { border: '1px solid var(--primary-color)' } : {}}
+                                placeholder={formData.expenseType === 'OUTRO' ? "Descreva qual é a despesa..." : "Detalhes adicionais do gasto..."}
                                 value={formData.description}
                                 onChange={(e) => setFormData({...formData, description: e.target.value})}
+                                required={formData.expenseType === 'OUTRO'}
                             />
                         </div>
 
-                        <button 
-                            type="submit" 
-                            className="btn-primary" 
-                            disabled={submitting}
-                            style={{ alignSelf: 'flex-start', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                        >
-                            {submitting ? <Loader2 className="animate-spin" size={16} /> : <Plus size={16} />}
-                            Adicionar Despesa
-                        </button>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                            <button 
+                                type="submit" 
+                                className="btn-primary" 
+                                disabled={submitting}
+                                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                            >
+                                {submitting ? <Loader2 className="animate-spin" size={16} /> : (isEditing ? <CheckCircle size={16} /> : <Plus size={16} />)}
+                                {isEditing ? 'Atualizar Despesa' : 'Adicionar Despesa'}
+                            </button>
+                            {isEditing && (
+                                <button type="button" className="btn-secondary" onClick={resetForm}>
+                                    Cancelar
+                                </button>
+                            )}
+                        </div>
                     </form>
+                </div>
+            ) : (
+                <div className="status-warning" style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    gap: '0.5rem', 
+                    padding: '1rem',
+                    backgroundColor: isLocked ? '#fee2e2' : '#fef3c7', 
+                    color: isLocked ? '#991b1b' : '#92400e', 
+                    borderRadius: '6px', 
+                    marginBottom: '1rem', 
+                    fontSize: '0.9rem',
+                    fontWeight: '500'
+                }}>
+                    <Lock size={18} />
+                    <span>{isLocked ? `OS ${orderStatus} - Edição bloqueada` : 'Lançamento permitido apenas em Andamento'}</span>
                 </div>
             )}
 
@@ -213,14 +283,23 @@ export default function ListaDespesas({ serviceOrderId, orderStatus, onUpdate })
                                 </div>
                                 <div className="item-actions" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                     <span style={{ fontWeight: 600, color: 'var(--text-color)' }}>R$ {d.value.toFixed(2)}</span>
-                                    {isEditable && (
-                                        <button 
-                                            onClick={() => handleDelete(d.id)}
-                                            title="Remover Despesa"
-                                            style={{ background: 'none', border: 'none', color: 'var(--danger-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.25rem' }}
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
+                                    {isEditable && !isLocked && (
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <button 
+                                                onClick={() => handleEditClick(d)}
+                                                title="Editar Despesa"
+                                                style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '0.25rem' }}
+                                            >
+                                                <PenTool size={18} />
+                                            </button>
+                                            <button 
+                                                onClick={() => handleDelete(d.id)}
+                                                title="Remover Despesa"
+                                                style={{ background: 'none', border: 'none', color: 'var(--danger-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '0.25rem' }}
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
                             </li>

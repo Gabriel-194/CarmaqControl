@@ -87,18 +87,18 @@ export function ProprietarioDashboard() {
                     </div>
                     <span className="stat-value" style={{ color: '#10b981' }}>{formatCurrency(stats.totalRevenue)}</span>
                     <span className="stat-desc">
-                        Bruto (Serviços + Peças + Despesas)
+                        Bruto (Serviços, Viagem, Km, Peças e Despesas)
                     </span>
                 </div>
 
                 <div className="stat-card" style={{ borderLeft: '4px solid #ef4444' }}>
                     <div className="stat-header">
-                        <span className="stat-title">Despesas (Técnicos)</span>
+                        <span className="stat-title">Custos Operacionais</span>
                         <TrendingUp className="stat-icon" size={20} color="#ef4444" style={{ transform: 'rotate(180deg)' }} />
                     </div>
                     <span className="stat-value" style={{ color: '#ef4444' }}>- {formatCurrency(stats.totalExpenses)}</span>
                     <span className="stat-desc">
-                        10% de Mão de Obra + 100% Despesas
+                        Repasse Técnico (10%) + Reembolsos (100%)
                     </span>
                 </div>
 
@@ -129,6 +129,15 @@ export function ProprietarioDashboard() {
                     </div>
                     <span className="stat-value">{stats.totalTechnicians || 0}</span>
                     <span className="stat-desc">{stats.totalClients || 0} clientes cadastrados</span>
+                </div>
+
+                <div className="stat-card" style={{ borderLeft: '4px solid #ef4444' }}>
+                    <div className="stat-header">
+                        <span className="stat-title">Com Problema</span>
+                        <AlertCircle className="stat-icon" size={20} color="#ef4444" />
+                    </div>
+                    <span className="stat-value">{stats.comProblemaOrders || 0}</span>
+                    <span className="stat-desc" style={{ color: '#ef4444' }}>Necessitam correção</span>
                 </div>
             </div>
 

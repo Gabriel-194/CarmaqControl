@@ -69,10 +69,17 @@ public class RateLimitingFilter implements Filter {
     }
 
     private String getClientIp(HttpServletRequest request) {
+        // Hardening: Em ambientes expostos, o X-Forwarded-For pode ser forjado.
+        // Se estivermos atrás de um Load Balancer (como AWS/Heroku/Cloudflare), 
+        // este header deve ser validado. Caso contrário, use o IP real da conexão.
+        
         String xfHeader = request.getHeader("X-Forwarded-For");
-        if (xfHeader == null) {
-            return request.getRemoteAddr();
+        if (xfHeader != null && !xfHeader.isEmpty()) {
+            // Pega o primeiro IP da lista, mas CUIDADO: isso é bypassável sem um Trusted Proxy.
+            // Em uma implantação real, deveríamos validar se o IP remoto é de um proxy confiável.
+            return xfHeader.split(",")[0].trim();
         }
-        return xfHeader.split(",")[0];
+        
+        return request.getRemoteAddr();
     }
 }

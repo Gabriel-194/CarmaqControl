@@ -13,4 +13,10 @@ public interface ServiceExpenseRepository extends JpaRepository<ServiceExpense, 
 
     @Query("SELECT COALESCE(SUM(e.value), 0) FROM ServiceExpense e WHERE e.serviceOrder.id = :id")
     Double sumTotalByServiceOrderId(@Param("id") Long id);
+
+    @Query("SELECT COALESCE(SUM(e.value), 0) FROM ServiceExpense e WHERE e.serviceOrder.id = :id AND e.expenseType = 'DESLOCAMENTO_KM'")
+    Double sumDisplacementByServiceOrderId(@Param("id") Long id);
+
+    @Query("SELECT COALESCE(SUM(e.value), 0) FROM ServiceExpense e WHERE e.serviceOrder.id = :id AND e.expenseType <> 'DESLOCAMENTO_KM'")
+    Double sumOtherExpensesByServiceOrderId(@Param("id") Long id);
 }

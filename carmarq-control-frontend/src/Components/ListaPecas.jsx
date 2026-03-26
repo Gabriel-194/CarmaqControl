@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Trash2, Loader2, Lock } from 'lucide-react'
+import { Plus, Trash2, Loader2, Lock, PenTool, CheckCircle } from 'lucide-react'
 import axios from 'axios'
 import { toast } from './ui/Toaster'
 import '../Styles/ListaPecas.css'
@@ -13,9 +13,17 @@ export default function ListaPecas({ serviceOrderId, orderStatus, onUpdate }) {
     const [nomePeca, setNomePeca] = useState('')
     const [qtd, setQtd] = useState(1)
     const [valorUnitario, setValorUnitario] = useState('')
+    
+    // Estados para edição
+    const [isEditing, setIsEditing] = useState(false)
+    const [editingId, setEditingId] = useState(null)
 
     const [totalPecas, setTotalPecas] = useState(0)
+    
+    // Travas: Peças só podem ser editadas/adicionadas em ANDAMENTO
+    // Mas se estiver PAGO ou CANCELADA, o bloqueio é total.
     const isEditable = orderStatus === 'EM_ANDAMENTO'
+    const isLocked = orderStatus === 'PAGO' || orderStatus === 'CANCELADA'
 
     const fetchParts = async () => {
         try {
@@ -33,31 +41,54 @@ export default function ListaPecas({ serviceOrderId, orderStatus, onUpdate }) {
         if (serviceOrderId) fetchParts()
     }, [serviceOrderId])
 
-    const handleAdd = async () => {
-        if (!isEditable) return
+    const handleSave = async () => {
+        if (isLocked) return
         if (!nomePeca || !valorUnitario) {
             toast('Preencha nome e valor da peça.', 'error')
             return
         }
         try {
-            await axios.post(`${API_URL}/${serviceOrderId}/parts`, {
+            const payload = {
                 partName: nomePeca,
                 quantity: parseInt(qtd),
                 unitPrice: parseFloat(valorUnitario)
-            }, { withCredentials: true })
-            toast('Peça adicionada!', 'success')
-            setNomePeca('')
-            setQtd(1)
-            setValorUnitario('')
+            }
+
+            if (isEditing) {
+                await axios.put(`${API_URL}/${serviceOrderId}/parts/${editingId}`, payload, { withCredentials: true })
+                toast('Peça atualizada!', 'success')
+            } else {
+                await axios.post(`${API_URL}/${serviceOrderId}/parts`, payload, { withCredentials: true })
+                toast('Peça adicionada!', 'success')
+            }
+
+            resetForm()
             fetchParts()
             if (onUpdate) onUpdate()
         } catch (error) {
-            toast('Erro ao adicionar peça.', 'error')
+            toast(error.response?.data?.message || 'Erro ao salvar peça.', 'error')
         }
     }
 
+    const resetForm = () => {
+        setNomePeca('')
+        setQtd(1)
+        setValorUnitario('')
+        setIsEditing(false)
+        setEditingId(null)
+    }
+
+    const handleEditClick = (peca) => {
+        setNomePeca(peca.partName)
+        setQtd(peca.quantity)
+        setValorUnitario(peca.unitPrice)
+        setEditingId(peca.id)
+        setIsEditing(true)
+    }
+
     const handleRemove = async (partId) => {
-        if (!isEditable) return
+        if (isLocked) return
+        if (!window.confirm('Excluir esta peça?')) return
         try {
             await axios.delete(`${API_URL}/${serviceOrderId}/parts/${partId}`, { withCredentials: true })
             toast('Peça removida.', 'success')
@@ -68,10 +99,13 @@ export default function ListaPecas({ serviceOrderId, orderStatus, onUpdate }) {
         }
     }
 
+    if (loading) return <div style={{ textAlign: 'center', padding: '1rem' }}><Loader2 className="animate-spin" size={20} /></div>
+
     return (
         <div className="pecas-container">
-            {isEditable ? (
-                <div className="add-peca-form">
+            {isEditable && !isLocked ? (
+                <div className="add-peca-form" style={{ backgroundColor: isEditing ? '#f0fdf4' : 'transparent', padding: isEditing ? '1rem' : '0', borderRadius: '8px', border: isEditing ? '1px solid var(--primary-color)' : 'none', marginBottom: isEditing ? '1rem' : '0' }}>
+                    {isEditing && <h4 style={{ width: '100%', marginBottom: '0.5rem', color: 'var(--primary-color)' }}>Editando Peça</h4>}
                     <input
                         type="text"
                         placeholder="Nome da peça..."
@@ -97,26 +131,31 @@ export default function ListaPecas({ serviceOrderId, orderStatus, onUpdate }) {
                         onChange={e => setValorUnitario(e.target.value)}
                         style={{ width: '120px' }}
                     />
-                    <button className="btn-add" onClick={handleAdd}>
-                        <Plus size={20} />
+                    <button className="btn-add" onClick={handleSave}>
+                        {isEditing ? <CheckCircle size={20} /> : <Plus size={20} />}
                     </button>
+                    {isEditing && (
+                        <button className="btn-secondary" onClick={resetForm} style={{ padding: '0.4rem', borderRadius: '4px', marginLeft: '0.5rem' }}>
+                            Cancelar
+                        </button>
+                    )}
                 </div>
             ) : (
                 <div className="status-warning" style={{ 
                     display: 'flex', 
                     alignItems: 'center', 
-                    justifyContent: 'center', // Centraliza o conteúdo para preencher o espaço
+                    justifyContent: 'center',
                     gap: '0.5rem', 
-                    padding: '1rem', // Aumenta o espaço (padding) igual a área de fotos
-                    backgroundColor: '#fef3c7', 
-                    color: '#92400e', 
+                    padding: '1rem',
+                    backgroundColor: isLocked ? '#fee2e2' : '#fef3c7', 
+                    color: isLocked ? '#991b1b' : '#92400e', 
                     borderRadius: '6px', 
                     marginBottom: '1rem', 
                     fontSize: '0.9rem',
                     fontWeight: '500'
                 }}>
                     <Lock size={18} />
-                    <span>Edição de peças bloqueada (OS deve estar em Andamento)</span>
+                    <span>{isLocked ? `OS ${orderStatus} - Edição bloqueada` : 'Edição de peças permitida apenas em Andamento'}</span>
                 </div>
             )}
 
@@ -136,10 +175,15 @@ export default function ListaPecas({ serviceOrderId, orderStatus, onUpdate }) {
                                 <div className="peca-actions">
                                     <span className="badge-qtd">{peca.quantity}x</span>
                                     <span className="peca-total">R$ {peca.totalPrice.toFixed(2)}</span>
-                                    {isEditable && (
-                                        <button className="btn-remove" onClick={() => handleRemove(peca.id)}>
-                                            <Trash2 size={16} />
-                                        </button>
+                                    {isEditable && !isLocked && (
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <button onClick={() => handleEditClick(peca)} style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                                                <PenTool size={16} />
+                                            </button>
+                                            <button className="btn-remove" onClick={() => handleRemove(peca.id)}>
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
                             </li>

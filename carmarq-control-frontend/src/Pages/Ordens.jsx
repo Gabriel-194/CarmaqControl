@@ -199,6 +199,7 @@ export default function Ordens() {
                                     <th>Máquina</th>
                                     <th>Técnico</th>
                                     <th>Data</th>
+                                    {(user?.role === 'PROPRIETARIO' || user?.role === 'FINANCEIRO') && <th>Lucro (R$)</th>}
                                     <th>Status</th>
                                 </tr>
                             </thead>
@@ -234,6 +235,11 @@ export default function Ordens() {
                                         <td>{os.machineName}</td>
                                         <td>{os.technicianName}</td>
                                         <td style={{ whiteSpace: 'nowrap' }}>{formatDate(os.serviceDate)}</td>
+                                        {(user?.role === 'PROPRIETARIO' || user?.role === 'FINANCEIRO') && (
+                                            <td style={{ fontWeight: '600', color: (os.netProfit || 0) >= 0 ? '#059669' : '#ef4444' }}>
+                                                R$ {(os.netProfit || 0).toFixed(2)}
+                                            </td>
+                                        )}
                                         <td>
                                             <span className={`status-badge ${statusMap[os.status]?.css || ''}`}>
                                                 {statusMap[os.status]?.label || os.status}

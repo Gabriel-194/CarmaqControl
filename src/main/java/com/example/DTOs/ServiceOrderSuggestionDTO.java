@@ -32,8 +32,6 @@ public class ServiceOrderSuggestionDTO {
     // Informações da máquina
     private String machineType;
     private String machineModel;
-    private String machineBrand;
-    private String machineDescription;
 
     // Peças comuns sugeridas para este tipo de máquina (pode ser estendido)
     private List<String> suggestedParts;

@@ -2,6 +2,12 @@ import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
+import axios from 'axios'
+
+// Configuração Global do Axios para Segurança (CSRF + Cookies)
+axios.defaults.withCredentials = true;
+axios.defaults.xsrfCookieName = 'XSRF-TOKEN';
+axios.defaults.xsrfHeaderName = 'X-XSRF-TOKEN';
 
 import './Styles/global.css'
 import Toaster from './Components/ui/Toaster'

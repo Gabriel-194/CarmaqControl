@@ -22,6 +22,7 @@ import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import com.itextpdf.layout.properties.VerticalAlignment;
+import com.itextpdf.kernel.pdf.canvas.draw.SolidLine;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.Resource;
@@ -84,258 +85,154 @@ public class ReportService {
             PdfFont bold   = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
             PdfFont normal = PdfFontFactory.createFont(StandardFonts.HELVETICA);
 
-            // ── CABEÇALHO ──────────────────────────────────────────────────────
-            Table header = new Table(UnitValue.createPercentArray(new float[]{40, 60}))
-                    .useAllAvailableWidth();
+            // ── CABEÇALHO (Logo à esquerda, Dados à direita) ────────────────
+            Table header = new Table(UnitValue.createPercentArray(new float[]{30, 70}))
+                    .useAllAvailableWidth().setBorder(Border.NO_BORDER);
 
-            // Coluna esquerda – logo (texto alternativo se sem imagem)
-            Cell logoCell = new Cell()
-                    .setBorder(Border.NO_BORDER)
-                    .setVerticalAlignment(VerticalAlignment.MIDDLE);
+            Cell logoCell = new Cell().setBorder(Border.NO_BORDER).setVerticalAlignment(VerticalAlignment.MIDDLE);
             try {
-                Resource resource = resourceLoader.getResource("classpath:/static/logo-carmaq.png");
-                if (resource.exists()) {
-                    byte[] logoBytes = resource.getInputStream().readAllBytes();
-                    Image logo = new Image(ImageDataFactory.create(logoBytes)).setWidth(120);
-                    logoCell.add(logo);
-                } else {
-                    throw new RuntimeException("Logo não encontrado via ResourceLoader");
-                }
+                // Tenta carregar o logo via ClassPathResource para o PDF também
+                org.springframework.core.io.ClassPathResource imgFile = new org.springframework.core.io.ClassPathResource("static/logo-carmaq.png");
+                byte[] logoBytes = imgFile.getInputStream().readAllBytes();
+                Image logo = new Image(ImageDataFactory.create(logoBytes)).setWidth(120);
+                logoCell.add(logo);
             } catch (Exception e) {
-                System.err.println("Erro ao carregar logo no PDF: " + e.getMessage());
-                // fallback textual
-                logoCell.add(new Paragraph("CARMAQ\nMÁQUINAS INDUSTRIAIS")
-                        .setFont(bold).setFontSize(12)
-                        .setFontColor(GREEN_DARK));
+                logoCell.add(new Paragraph("CARMAQ").setFont(bold).setFontSize(16).setFontColor(GREEN_DARK));
             }
 
-            // Coluna direita – dados da empresa
-            Cell infoCell = new Cell()
-                    .setBorder(Border.NO_BORDER)
-                    .setTextAlignment(TextAlignment.CENTER);
-            infoCell.add(new Paragraph("CARMAQ SERVICE").setFont(bold).setFontSize(11));
-            infoCell.add(new Paragraph("CNPJ: 60.526.327/0001-23").setFont(normal).setFontSize(9));
-            infoCell.add(new Paragraph("Av. Das Araucárias, 4255 | 83707-065 | Araucária | Paraná").setFont(normal).setFontSize(9));
-            infoCell.add(new Paragraph("Fone: 55 41 3346 1430   |   55 41 99663 1349").setFont(normal).setFontSize(9));
-            infoCell.add(new Paragraph("vendas@carmaq.ind.br   |   service@carmaq.ind.br").setFont(normal).setFontSize(9));
+            Cell infoCell = new Cell().setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.RIGHT);
+            infoCell.add(new Paragraph("CARMAQ SERVICE").setFont(bold).setFontSize(12).setMarginBottom(-2));
+            infoCell.add(new Paragraph("CNPJ: 60.526.327/0001-23").setFont(normal).setFontSize(9).setMarginBottom(-2));
+            infoCell.add(new Paragraph("Av. Das Araucárias, 4255 | Araucária - PR").setFont(normal).setFontSize(9).setMarginBottom(-2));
+            infoCell.add(new Paragraph("Fone: (41) 3346-1430 | (41) 99663-1349").setFont(normal).setFontSize(9).setMarginBottom(-2));
+            infoCell.add(new Paragraph("service@carmaq.ind.br").setFont(normal).setFontSize(9));
 
             header.addCell(logoCell);
             header.addCell(infoCell);
             document.add(header);
-            document.add(new Paragraph(" ").setFontSize(4));
+            document.add(new Paragraph(" ").setFontSize(2));
+            document.add(new LineSeparator(new SolidLine(0.5f)).setMarginTop(2).setMarginBottom(8));
 
-            // ── BANNER: TIPO DA OS ─────────────────────────────────────────────
-            String osNumber = "OS" + LocalDate.now().getYear()
-                    + String.format("%02d", LocalDate.now().getMonthValue())
-                    + String.format("%02d", LocalDate.now().getDayOfMonth())
-                    + String.format("%02d", order.getId());
-
+            // ── BANNER PRINCIPAL ─────────────────────────────────────────────
+            String osNumber = "OS" + LocalDate.now().getYear() + String.format("%02d%02d%02d", LocalDate.now().getMonthValue(), LocalDate.now().getDayOfMonth(), order.getId());
             boolean isGarantia = "VALENTIM".equalsIgnoreCase(order.getManutencaoOrigin());
-            String bannerTitle = isGarantia
-                    ? "ORDEM DE SERVIÇO EM GARANTIA"
-                    : "ORDEM DE SERVIÇO DE MANUTENÇÃO";
+            String bannerTitle = isGarantia ? "ORDEM DE SERVIÇO EM GARANTIA" : "ORDEM DE SERVIÇO DE MANUTENÇÃO";
 
-            Table bannerTable = new Table(UnitValue.createPercentArray(new float[]{70, 30}))
-                    .useAllAvailableWidth();
-            Cell bannerLeft = new Cell()
-                    .setBackgroundColor(GREEN_DARK)
-                    .setBorder(Border.NO_BORDER)
-                    .setPadding(5);
-            bannerLeft.add(new Paragraph(bannerTitle).setFont(bold).setFontSize(13)
-                    .setFontColor(ColorConstants.WHITE));
-            Cell bannerRight = new Cell()
-                    .setBackgroundColor(GREEN_DARK)
-                    .setBorder(Border.NO_BORDER)
-                    .setTextAlignment(TextAlignment.RIGHT)
-                    .setPadding(5);
-            bannerRight.add(new Paragraph(osNumber).setFont(bold).setFontSize(12)
-                    .setFontColor(ColorConstants.WHITE));
-            bannerTable.addCell(bannerLeft);
-            bannerTable.addCell(bannerRight);
-            document.add(bannerTable);
+            Table banner = new Table(UnitValue.createPercentArray(new float[]{75, 25})).useAllAvailableWidth();
+            banner.addCell(new Cell().setBackgroundColor(GREEN_DARK).setPadding(6).setBorder(Border.NO_BORDER)
+                    .add(new Paragraph(bannerTitle).setFont(bold).setFontSize(13).setFontColor(ColorConstants.WHITE)));
+            banner.addCell(new Cell().setBackgroundColor(GREEN_DARK).setPadding(6).setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.RIGHT)
+                    .add(new Paragraph(osNumber).setFont(bold).setFontSize(12).setFontColor(ColorConstants.WHITE)));
+            document.add(banner);
 
-            // ── DADOS DO CLIENTE ───────────────────────────────────────────────
-            Table clientTable = new Table(UnitValue.createPercentArray(new float[]{15, 45, 15, 25}))
-                    .useAllAvailableWidth();
-
-            addClientRow(clientTable, bold, normal, "Cliente:",
-                    order.getClient().getCompanyName(), "Data:",
-                    order.getServiceDate() != null ? order.getServiceDate().format(PTBR) : "");
-            addClientRow(clientTable, bold, normal, "Endereço:",
-                    safeStr(order.getClient().getAddress()), "Cidade:",
-                    extractCity(order.getClient().getAddress()));
-            addClientRow(clientTable, bold, normal, "CNPJ:",
-                    safeStr(order.getClient().getCnpj()), "Estado:",
-                    extractState(order.getClient().getAddress()));
-            addClientRow(clientTable, bold, normal, "Contato:",
-                    safeStr(order.getClient().getContactName()), "Fone:",
-                    safeStr(order.getClient().getPhone()));
+            // ── SEÇÃO: DADOS DO CLIENTE ────────────────────────────────────────
+            document.add(new Paragraph("DADOS DO CLIENTE").setFont(bold).setFontSize(9).setMarginTop(10).setFontColor(GREEN_DARK));
+            Table clientTable = new Table(UnitValue.createPercentArray(new float[]{15, 50, 10, 25})).useAllAvailableWidth();
+            addClientRow(clientTable, bold, normal, "Cliente:", order.getClient().getCompanyName(), "Data:", order.getServiceDate() != null ? order.getServiceDate().format(PTBR) : "-");
+            addClientRow(clientTable, bold, normal, "Endereço:", safeStr(order.getClient().getAddress()), "Fone:", safeStr(order.getClient().getPhone()));
+            addClientRow(clientTable, bold, normal, "Contato:", safeStr(order.getClient().getContactName()), "Cidade:", extractCity(order.getClient().getAddress()));
             document.add(clientTable);
 
-            // ── BANNER: MANUTENÇÃO – MÁQUINA – CLIENTE ────────────────────────
-            String sectionTitle = "MANUTENÇÃO - MÁQUINA - CLIENTE";
-            Table sectionBanner = new Table(new float[]{1}).useAllAvailableWidth();
-            Cell sectionCell = new Cell()
-                    .setBackgroundColor(GREEN_DARK)
-                    .setBorder(Border.NO_BORDER)
-                    .setTextAlignment(TextAlignment.CENTER)
-                    .setPadding(5);
-            sectionCell.add(new Paragraph(sectionTitle).setFont(bold).setFontSize(13)
-                    .setFontColor(ColorConstants.WHITE));
-            sectionBanner.addCell(sectionCell);
-            document.add(sectionBanner);
+            // ── SEÇÃO: DADOS DA MÁQUINA ───────────────────────────────────────
+            document.add(new Paragraph("DADOS DA MÁQUINA").setFont(bold).setFontSize(9).setMarginTop(10).setFontColor(GREEN_DARK));
+            Table machineTable = new Table(UnitValue.createPercentArray(new float[]{15, 85})).useAllAvailableWidth();
+            machineTable.addCell(new Cell().add(new Paragraph("Máquina:").setFont(bold).setFontSize(9)).setBorder(new SolidBorder(0.5f)).setBackgroundColor(GREEN_LIGHT));
+            machineTable.addCell(new Cell().add(new Paragraph(safeStr(order.getMachine().getName()) + " (" + (order.getMachine().getMachineType() != null ? order.getMachine().getMachineType().name() : "") + ")").setFont(normal).setFontSize(9)).setBorder(new SolidBorder(0.5f)));
+            document.add(machineTable);
 
-            // ── TABELA DE ITENS ────────────────────────────────────────────────
-            float[] colWidths = {5f, 7f, 7f, 9f, 38f, 17f, 17f};
-            Table itemsTable = new Table(UnitValue.createPercentArray(colWidths))
-                    .useAllAvailableWidth();
+            // ── TABELA DE SERVIÇOS E ITENS ───────────────────────────────────
+            document.add(new Paragraph("RELATÓRIO DE SERVIÇOS E PEÇAS").setFont(bold).setFontSize(9).setMarginTop(12).setFontColor(GREEN_DARK));
+            float[] colWidths = {6f, 8f, 10f, 48f, 14f, 14f};
+            Table itemsTable = new Table(UnitValue.createPercentArray(colWidths)).useAllAvailableWidth();
 
-            // Cabeçalho
-            String[] headers = {"Item", "Unid.", "Qtde.", "Código", "Descrição", "R$ Unitario", "R$ Total"};
-            for (String h : headers) {
-                Cell hc = new Cell().setBackgroundColor(GREEN_LIGHT)
-                        .setBorder(new SolidBorder(0.5f))
-                        .setTextAlignment(TextAlignment.CENTER)
-                        .setPadding(3);
-                hc.add(new Paragraph(h).setFont(bold).setFontSize(9));
-                itemsTable.addHeaderCell(hc);
+            String[] tableHeaders = {"Unid", "Qtde", "Código", "Descrição do Serviço / Peça", "Unitário", "Total"};
+            for (String h : tableHeaders) {
+                itemsTable.addHeaderCell(new Cell().setBackgroundColor(GREEN_LIGHT).setBorder(new SolidBorder(0.5f)).setPadding(4).setTextAlignment(TextAlignment.CENTER)
+                        .add(new Paragraph(h).setFont(bold).setFontSize(9)));
             }
 
-            // Dados de tempo (horas trabalhadas)
-            List<TimeTracking> times = timeTrackingRepository.findByServiceOrderId(order.getId());
-            double totalWorkMinutes = times.stream()
-                    .filter(t -> "TRABALHO".equals(t.getType()) && t.getStartTime() != null && t.getEndTime() != null)
-                    .mapToLong(t -> java.time.Duration.between(t.getStartTime(), t.getEndTime()).toMinutes())
-                    .sum();
-            double totalTravelMinutes = times.stream()
-                    .filter(t -> !"TRABALHO".equals(t.getType()) && t.getStartTime() != null && t.getEndTime() != null)
-                    .mapToLong(t -> java.time.Duration.between(t.getStartTime(), t.getEndTime()).toMinutes())
-                    .sum();
-
+            // Lógica de valores e filtros
             double multiplier = "TECNICO".equals(userRole) ? 0.1 : 1.0;
-            double hourlyRate = ("VALENTIM".equalsIgnoreCase(order.getManutencaoOrigin()) ? 185.0 : 250.0) * multiplier;
-            double travelRate  = 85.0 * multiplier;
-            double kmRate      = 2.20;
+            List<TimeTracking> times = timeTrackingRepository.findByServiceOrderId(order.getId());
+            double totalWorkHours = times.stream().filter(t -> "TRABALHO".equals(t.getType()) && t.getStartTime() != null && t.getEndTime() != null)
+                    .mapToLong(t -> java.time.Duration.between(t.getStartTime(), t.getEndTime()).toMinutes()).sum() / 60.0;
+            double totalTravelHours = times.stream().filter(t -> !"TRABALHO".equals(t.getType()) && t.getStartTime() != null && t.getEndTime() != null)
+                    .mapToLong(t -> java.time.Duration.between(t.getStartTime(), t.getEndTime()).toMinutes()).sum() / 60.0;
 
-            double horasTrabalho     = totalWorkMinutes / 60.0;
-            double horasDeslocamento = totalTravelMinutes / 60.0;
-            double kmRodados         =  0.0;
+            double valMaoObra = (order.getServiceValue() != null ? order.getServiceValue() : 0.0) * multiplier;
+            double valTravel = (order.getTravelValue() != null ? order.getTravelValue() : 0.0) * multiplier;
+            double valKm = "TECNICO".equals(userRole) ? 0.0 : (order.getDisplacementValue() != null ? order.getDisplacementValue() : 0.0);
 
-            // Despesas
+            // Adicionar linhas fixas
+            addItemRowCompact(itemsTable, normal, "H", totalTravelHours, "TRV", "HORAS DESLOCAMENTO TÉCNICO", valTravel / (totalTravelHours > 0 ? totalTravelHours : 1), valTravel);
+            addItemRowCompact(itemsTable, normal, "H", totalWorkHours, "SRV", "HORAS TRABALHADAS (MÃO DE OBRA)", valMaoObra / (totalWorkHours > 0 ? totalWorkHours : 1), valMaoObra);
+            if (valKm > 0) addItemRowCompact(itemsTable, normal, "KM", 1.0, "KM", "DESLOCAMENTO (KM)", valKm, valKm);
+
+            // Despesas e Peças
             List<ServiceExpense> expenses = serviceExpenseRepository.findByServiceOrderId(order.getId());
-            double totalRefeicao = expenses.stream()
-                    .filter(e -> e.getExpenseType() != null &&
-                            e.getExpenseType().name().equals("ALIMENTACAO"))
-                    .mapToDouble(ServiceExpense::getValue).sum();
-            double totalPedagio = expenses.stream()
-                    .filter(e -> e.getExpenseType() != null &&
-                            e.getExpenseType().name().equals("PEDAGIO"))
-                    .mapToDouble(ServiceExpense::getValue).sum();
+            for (ServiceExpense exp : expenses) {
+                addItemRowCompact(itemsTable, normal, "V", 1.0, "EXP", exp.getExpenseType().name() + ": " + safeStr(exp.getDescription()), exp.getValue(), exp.getValue());
+            }
 
-            // Peças - Técnicos não devem ver o valor total
             List<ServicePart> parts = servicePartRepository.findByServiceOrderId(order.getId());
-            double totalPecas = "TECNICO".equals(userRole) ? 0.0 : parts.stream().mapToDouble(p -> p.getUnitPrice() * p.getQuantity()).sum();
-
-            // Linhas fixas do template
-            Object[][] rows = {
-                {1, "MO",   horasDeslocamento, "XXX", "Hora Deslocamento",                         travelRate,  horasDeslocamento * travelRate},
-                {2, "MO",   horasTrabalho,     "XXX", "Hora Trabalhada",                           hourlyRate,  horasTrabalho * hourlyRate},
-                {3, "KM",   kmRodados,         "XXX", "Quilometro rodado ida e volta",             kmRate,      kmRodados * kmRate},
-                {4, "DESP", 1.0,               "XXXX","REFEIÇÃO 1 DIAS + 12,5 % imposto NF",       totalRefeicao, totalRefeicao > 0 ? totalRefeicao : null},
-                {5, "DESP", totalPedagio > 0 ? 1.0 : 0.0, "XXX", "Pedágios",                      totalPedagio,  totalPedagio > 0 ? totalPedagio : null},
-                {6, "PÇS",  totalPecas > 0 ? 1.0 : 0.0,  "XXX", "Peças Descrição: " + buildPartsDescription(parts), totalPecas, totalPecas > 0 ? totalPecas : null},
-            };
-
-            boolean alt = true;
-            double runningTotal = 0;
-            for (Object[] row : rows) {
-                DeviceRgb rowBg = alt ? GREEN_LIGHT : null;
-                alt = !alt;
-
-                double qty  = row[2] instanceof Number ? ((Number) row[2]).doubleValue() : 0;
-                double unit = row[5] instanceof Number ? ((Number) row[5]).doubleValue() : 0;
-                Double total = (Double) row[6];
-
-                addItemRow(itemsTable, bold, normal, rowBg,
-                        String.valueOf(row[0]),
-                        String.valueOf(row[1]),
-                        qty == 0 ? "0" : String.format("%.2f", qty),
-                        String.valueOf(row[3]),
-                        String.valueOf(row[4]),
-                        unit == 0 ? "-" : String.format("%.2f", unit),
-                        total == null || total == 0 ? "-" : String.format("R$ %.2f", total));
-
-                if (total != null) runningTotal += total;
+            if (!parts.isEmpty()) {
+                double partsTotal = "TECNICO".equals(userRole) ? 0.0 : parts.stream().mapToDouble(p -> p.getUnitPrice() * p.getQuantity()).sum();
+                addItemRowCompact(itemsTable, normal, "CJ", 1.0, "PART", "CONJUNTO DE PEÇAS: " + buildPartsDescription(parts), partsTotal, partsTotal);
             }
 
             document.add(itemsTable);
 
-            // ── TOTAIS ─────────────────────────────────────────────────────────
-            Table totalsTable = new Table(UnitValue.createPercentArray(new float[]{83, 17}))
-                    .useAllAvailableWidth();
+            // ── TOTAIS E PAGAMENTO ───────────────────────────────────────────
+            Table footerTable = new Table(UnitValue.createPercentArray(new float[]{70, 30})).useAllAvailableWidth().setMarginTop(10);
+            
+            // Lado Esquerdo: Dados Bancários e Obs
+            Cell bankCell = new Cell().setBorder(Border.NO_BORDER).setFontSize(8);
+            bankCell.add(new Paragraph("DADOS PARA PAGAMENTO:").setFont(bold));
+            bankCell.add(new Paragraph("CARMAQ SERVICE LTDA | CNPJ: 60.526.327/0001-23\nITAU AG: 4685 CC: 98576-6 | PIX: 60526327000123").setFont(normal));
+            bankCell.add(new Paragraph("\nOBSERVAÇÕES: " + safeStr(order.getObservations())).setFont(normal));
+            footerTable.addCell(bankCell);
 
-            addTotalRow(totalsTable, bold, normal, GREEN_LIGHT, "Total", runningTotal > 0 ? String.format("R$ %.2f", runningTotal) : "-");
-            addTotalRow(totalsTable, bold, normal, null,        "Desconto", "-");
+            // Lado Direito: Resumo Financeiro
+            double runningTotal = valMaoObra + valTravel + valKm + expenses.stream().mapToDouble(ServiceExpense::getValue).sum() + ("TECNICO".equals(userRole) ? 0 : parts.stream().mapToDouble(p -> p.getUnitPrice() * p.getQuantity()).sum());
+            double discount = order.getDiscountValue() != null ? order.getDiscountValue() : 0.0;
+            
+            Cell totalsCell = new Cell().setBorder(Border.NO_BORDER);
+            Table innerTotals = new Table(UnitValue.createPercentArray(new float[]{60, 40})).useAllAvailableWidth();
+            addInnerTotal(innerTotals, normal, "Subtotal:", runningTotal);
+            addInnerTotal(innerTotals, normal, "Desconto:", -discount);
+            addInnerTotal(innerTotals, bold, "TOTAL GERAL:", runningTotal - discount, GREEN_DARK, ColorConstants.WHITE);
+            totalsCell.add(innerTotals);
+            footerTable.addCell(totalsCell);
+            
+            document.add(footerTable);
 
-            // Total Geral – fundo verde escuro
-            Cell tgLabel = new Cell().setBackgroundColor(GREEN_DARK).setBorder(new SolidBorder(0.5f))
-                    .setPadding(4);
-            tgLabel.add(new Paragraph("Total Geral do Pedido").setFont(bold).setFontSize(10)
-                    .setFontColor(ColorConstants.WHITE));
-            Cell tgValue = new Cell().setBackgroundColor(GREEN_DARK).setBorder(new SolidBorder(0.5f))
-                    .setTextAlignment(TextAlignment.RIGHT).setPadding(4);
-            tgValue.add(new Paragraph(runningTotal > 0 ? String.format("R$ %.2f", runningTotal) : "R$ 0,00")
-                    .setFont(bold).setFontSize(10).setFontColor(ColorConstants.WHITE));
-            totalsTable.addCell(tgLabel);
-            totalsTable.addCell(tgValue);
-            document.add(totalsTable);
+            // ── ASSINATURAS ──────────────────────────────────────────────────
+            document.add(new Paragraph("\n\n").setFontSize(10));
+            Table signTable = new Table(UnitValue.createPercentArray(new float[]{45, 10, 45})).useAllAvailableWidth();
+            
+            Cell s1 = new Cell().setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.CENTER);
+            s1.add(new LineSeparator(new SolidLine(0.5f)).setWidth(UnitValue.createPercentValue(80)));
+            s1.add(new Paragraph("Assinatura do Técnico\n" + safeStr(order.getTechnician().getNome())).setFont(normal).setFontSize(8));
+            
+            Cell sEmpty = new Cell().setBorder(Border.NO_BORDER);
+            
+            Cell s2 = new Cell().setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.CENTER);
+            s2.add(new LineSeparator(new SolidLine(0.5f)).setWidth(UnitValue.createPercentValue(80)));
+            s2.add(new Paragraph("Assinatura do Cliente (Carimbo/Nome)\nData: ___/___/___").setFont(normal).setFontSize(8));
+            
+            signTable.addCell(s1);
+            signTable.addCell(sEmpty);
+            signTable.addCell(s2);
+            document.add(signTable);
 
-            // ── RODAPÉ DE CONDIÇÕES ────────────────────────────────────────────
-            document.add(new Paragraph(" ").setFontSize(6));
-            document.add(new Paragraph("Prazo de entrega: Serviço efetuado").setFont(normal).setFontSize(10));
-            document.add(new Paragraph("Efetuado por: " + safeStr(order.getTechnician().getNome())).setFont(normal).setFontSize(10));
-
-            // Forma de pagamento – fundo verde
-            Table pagTable = new Table(new float[]{1}).useAllAvailableWidth();
-            Cell pagCell = new Cell().setBackgroundColor(GREEN_DARK).setBorder(Border.NO_BORDER).setPadding(4);
-            pagCell.add(new Paragraph("Forma de pagamento:").setFont(bold).setFontSize(10)
-                    .setFontColor(ColorConstants.WHITE));
-            pagTable.addCell(pagCell);
-            document.add(pagTable);
-
-            document.add(new Paragraph("Impostos: Incluso").setFont(bold).setFontSize(10));
-
-            // ── DADOS PARA PAGAMENTO ───────────────────────────────────────────
-            document.add(new Paragraph(" ").setFontSize(8));
-            document.add(new Paragraph("DADOS PARA PAGAMENTO").setFont(bold).setFontSize(10));
-            String[] bankData = {
-                    "CARMAQ SERVICE LTDA",
-                    "CNPJ: 60.526.327/0001-23",
-                    "ITAU",
-                    "AG: 4685",
-                    "CC: 98576-6",
-                    "PIX: 60526327000123"
-            };
-            for (String line : bankData) {
-                document.add(new Paragraph(line).setFont(normal).setFontSize(9));
-            }
-
-            document.add(new Paragraph(" ").setFontSize(4));
-            document.add(new Paragraph("OBS:  " + safeStr(order.getObservations())).setFont(normal).setFontSize(9));
-
-            // Rodapé – logo Valentin (cliente) se for garantia
+            // Rodapé logo do cliente (Garantia)
             if (isGarantia) {
-                document.add(new Paragraph(" ").setFontSize(10));
+                document.add(new Paragraph("\n").setFontSize(5));
                 try {
                     byte[] vLogo = getClass().getResourceAsStream("/static/logo-valentin.png").readAllBytes();
-                    Image vImg = new Image(ImageDataFactory.create(vLogo)).setWidth(140)
-                            .setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.CENTER);
+                    Image vImg = new Image(ImageDataFactory.create(vLogo)).setWidth(100).setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.CENTER);
                     document.add(vImg);
-                } catch (Exception ignored) {
-                    document.add(new Paragraph("VALENTIN – SOLUÇÕES INDUSTRIAIS")
-                            .setFont(bold).setFontSize(11).setFontColor(GREEN_DARK)
-                            .setTextAlignment(TextAlignment.CENTER));
-                }
+                } catch (Exception ignored) {}
             }
 
         } catch (Exception e) {
@@ -387,7 +284,26 @@ public class ReportService {
             currencyGreenStyle.setDataFormat(fmt.getFormat("R$ #,##0.00"));
 
             // ── Linha 1 – em branco ────────────────────────────────────────────
-            ws.createRow(0).setHeightInPoints(13.5f);
+            // Lógica para desenhar imagem no Excel
+            try {
+                org.springframework.core.io.ClassPathResource imgFile = new org.springframework.core.io.ClassPathResource("static/logo-carmaq.png");
+                byte[] imgBytes = imgFile.getInputStream().readAllBytes();
+                int pictureIdx = wb.addPicture(imgBytes, Workbook.PICTURE_TYPE_PNG);
+                
+                CreationHelper helper = wb.getCreationHelper();
+                Drawing<?> drawing = ws.createDrawingPatriarch();
+                ClientAnchor anchor = helper.createClientAnchor();
+                
+                // Define a posição da imagem (Ex: Coluna 0, Linha 0)
+                anchor.setCol1(0); 
+                anchor.setRow1(0);
+                anchor.setCol2(2); // Vai até a coluna 2
+                anchor.setRow2(4); // Vai até a linha 4
+                
+                drawing.createPicture(anchor, pictureIdx);
+            } catch (Exception e) {
+                System.out.println("Erro ao carregar imagem para o Excel: " + e.getMessage());
+            }
 
             // ── Linhas 2-6 – cabeçalho da empresa (centrado, mesclado A-H) ────
             String[] companyLines = {
@@ -536,7 +452,8 @@ public class ReportService {
             Row r22 = ws.createRow(21);
             r22.setHeightInPoints(16.5f);
             xlsCell(r22, 0, "Desconto", normalStyle);
-            xlsNum(r22, 7, 0.0, normalStyle);
+            double discountVal = order.getDiscountValue() != null ? order.getDiscountValue() : 0.0;
+            xlsNum(r22, 7, discountVal, normalStyle);
 
             // ── Linha 23 – Total Geral ────────────────────────────────────────
             Row r23 = ws.createRow(22);
@@ -631,7 +548,8 @@ public class ReportService {
             totalStyle.setDataFormat(fmt.getFormat("R$ #,##0.00"));
             CellStyle headerGreen = xlsBodyStyle(wb, XLS_GREEN_LIGHT, true, 11, HorizontalAlignment.LEFT);
 
-            // Linhas 1-5 – bloco vazio (header area para logo se necessário)
+            // ── Inserir Logo ──────────────────────────────────────────────────
+            addLogoToExcel(wb, ws);
             for (int i = 0; i < 5; i++) ws.createRow(i).setHeightInPoints(14f);
 
             // Linha 6 – RELATÓRIO DE DESPESAS (banner verde)
@@ -798,41 +716,17 @@ public class ReportService {
         t.addCell(c1); t.addCell(c2); t.addCell(c3); t.addCell(c4);
     }
 
-    private void addItemRow(Table t, PdfFont bold, PdfFont normal,
-                             DeviceRgb bg, String... cols) {
-        for (int i = 0; i < cols.length; i++) {
-            Cell c = new Cell().setBorder(new SolidBorder(0.3f)).setPadding(2);
-            if (bg != null) c.setBackgroundColor(bg);
-            c.add(new Paragraph(cols[i]).setFont(normal).setFontSize(9));
-            if (i == 4) c.setTextAlignment(TextAlignment.LEFT);
-            else         c.setTextAlignment(TextAlignment.CENTER);
-            t.addCell(c);
-        }
-    }
-
-    private void addTotalRow(Table t, PdfFont bold, PdfFont normal,
-                              DeviceRgb bg, String label, String value) {
-        Cell lc = new Cell().setBorder(new SolidBorder(0.3f)).setPadding(3);
-        if (bg != null) lc.setBackgroundColor(bg);
-        lc.add(new Paragraph(label).setFont(normal).setFontSize(9));
-        Cell vc = new Cell().setBorder(new SolidBorder(0.3f)).setTextAlignment(TextAlignment.RIGHT).setPadding(3);
-        if (bg != null) vc.setBackgroundColor(bg);
-        vc.add(new Paragraph(value).setFont(normal).setFontSize(9));
-        t.addCell(lc); t.addCell(vc);
-    }
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Helpers – XLSX (Apache POI)
     // ═══════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Insere o logo da Carmaq no canto superior esquerdo da planilha Excel.
-     */
+    /** Insere o logotipo oficial da Carmarq no Excel no canto superior esquerdo */
     private void addLogoToExcel(XSSFWorkbook wb, XSSFSheet sheet) {
         try {
-            Resource resource = resourceLoader.getResource("classpath:/static/logo-carmaq.png");
+            Resource resource = resourceLoader.getResource("classpath:static/logo-carmaq.png");
             if (!resource.exists()) {
-                System.err.println("addLogoToExcel: Arquivo não encontrado via ResourceLoader");
+                System.err.println("addLogoToExcel: Arquivo logo-carmaq.png não encontrado em static/");
                 return;
             }
             byte[] logoBytes = resource.getInputStream().readAllBytes();
@@ -842,17 +736,16 @@ public class ReportService {
             Drawing<?> drawing = sheet.createDrawingPatriarch();
             ClientAnchor anchor = helper.createClientAnchor();
             
-            // Posição: Coluna A-C, Linha 2-6 (indices 0-2, 1-5)
+            // Posição: Canto Superior Esquerdo (A1 até C5 aproximadamente)
             anchor.setCol1(0);
-            anchor.setRow1(1); 
+            anchor.setRow1(0); 
             anchor.setCol2(3);
-            anchor.setRow2(6);
+            anchor.setRow2(5);
             
             Picture pict = drawing.createPicture(anchor, pictureIdx);
-            pict.resize(1.0); // Ajusta a imagem mantendo a proporção
+            pict.resize(0.8); // Reduz levemente para não encostar nas bordas
         } catch (Exception e) {
             System.err.println("Erro ao inserir logo no Excel: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 
@@ -948,6 +841,34 @@ public class ReportService {
                 .filter(t -> t.getStartTime() != null && t.getEndTime() != null)
                 .mapToLong(t -> java.time.Duration.between(t.getStartTime(), t.getEndTime()).toMinutes())
                 .sum() / 60.0;
+    }
+
+    private void addItemRowCompact(Table t, PdfFont font, String unit, double qty, String code, String desc, double vUnit, double vTotal) {
+        t.addCell(new Cell().add(new Paragraph(unit).setFont(font).setFontSize(8)).setTextAlignment(TextAlignment.CENTER).setBorder(new SolidBorder(0.3f)));
+        t.addCell(new Cell().add(new Paragraph(String.format("%.2f", qty)).setFont(font).setFontSize(8)).setTextAlignment(TextAlignment.CENTER).setBorder(new SolidBorder(0.3f)));
+        t.addCell(new Cell().add(new Paragraph(code).setFont(font).setFontSize(8)).setTextAlignment(TextAlignment.CENTER).setBorder(new SolidBorder(0.3f)));
+        t.addCell(new Cell().add(new Paragraph(desc).setFont(font).setFontSize(8)).setTextAlignment(TextAlignment.LEFT).setBorder(new SolidBorder(0.3f)));
+        t.addCell(new Cell().add(new Paragraph(vUnit > 0 ? String.format("%.2f", vUnit) : "-").setFont(font).setFontSize(8)).setTextAlignment(TextAlignment.RIGHT).setBorder(new SolidBorder(0.3f)));
+        t.addCell(new Cell().add(new Paragraph(vTotal > 0 ? String.format("R$ %.2f", vTotal) : "-").setFont(font).setFontSize(8)).setTextAlignment(TextAlignment.RIGHT).setBorder(new SolidBorder(0.3f)));
+    }
+
+    private void addInnerTotal(Table t, PdfFont font, String label, double value) {
+        addInnerTotal(t, font, label, value, null, null);
+    }
+
+    private void addInnerTotal(Table t, PdfFont font, String label, double value, DeviceRgb bg, com.itextpdf.kernel.colors.Color fontColor) {
+        Cell c1 = new Cell().add(new Paragraph(label).setFont(font).setFontSize(9)).setBorder(new SolidBorder(0.5f)).setPadding(2);
+        Cell c2 = new Cell().add(new Paragraph(String.format("R$ %.2f", value)).setFont(font).setFontSize(9)).setBorder(new SolidBorder(0.5f)).setPadding(2).setTextAlignment(TextAlignment.RIGHT);
+        if (bg != null) {
+            c1.setBackgroundColor(bg);
+            c2.setBackgroundColor(bg);
+        }
+        if (fontColor != null) {
+            c1.setFontColor(fontColor);
+            c2.setFontColor(fontColor);
+        }
+        t.addCell(c1);
+        t.addCell(c2);
     }
 
     /** Monta descrição resumida das peças */

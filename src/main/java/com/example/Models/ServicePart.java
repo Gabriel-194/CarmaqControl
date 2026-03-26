@@ -12,7 +12,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "service_parts")
+@Table(name = "service_parts", indexes = {
+    @Index(name = "idx_part_so", columnList = "service_order_id")
+})
 public class ServicePart {
 
     @Id

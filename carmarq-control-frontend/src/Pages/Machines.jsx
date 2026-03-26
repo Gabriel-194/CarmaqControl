@@ -161,8 +161,8 @@ export default function Machines() {
                                 <tr>
                                     <th>Tipo</th>
                                     <th>Nome</th>
-                                    <th>Modelo</th>
-                                    <th>Núm. Série</th>
+                                     <th>Modelo</th>
+                                     <th>Núm. Série</th>
                                     <th>Instalação</th>
                                     <th>Status</th>
                                     <th className="text-right">Ações</th>
@@ -173,8 +173,8 @@ export default function Machines() {
                                     <tr key={m.id}>
                                         <td className="font-bold">{typeLabels[m.machineType] || m.machineType}</td>
                                         <td>{m.name}</td>
-                                        <td>{m.model}</td>
-                                        <td className="text-muted">{m.serialNumber}</td>
+                                         <td>{m.model}</td>
+                                         <td className="text-muted">{m.serialNumber}</td>
                                         <td className="font-bold">R$ {(m.installationPrice || 0).toFixed(2)}</td>
                                         <td>
                                             <span className={m.active ? 'badge-active' : 'badge-inactive'}>

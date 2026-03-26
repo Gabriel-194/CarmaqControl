@@ -170,37 +170,37 @@ export default function MachineModal({ machine, onClose, onSave, errors = {} }) 
                             {errors.model && <span className="error-message">{errors.model}</span>}
                         </div>
                         <div className="form-group">
-                            <label>Número de Série *</label>
-                            <input
-                                type="text"
-                                name="serialNumber"
-                                className={`form-input ${errors.serialNumber ? 'input-error' : ''}`}
-                                placeholder="S/N"
-                                value={formData.serialNumber}
-                                onChange={handleChange}
-                                required
-                            />
-                            {errors.serialNumber && <span className="error-message">{errors.serialNumber}</span>}
-                        </div>
-                    </div>
-
-                    <div className="form-row">
-                        <div className="form-group">
-                            <label>Preço de Instalação (R$) *</label>
-                            <input
-                                type="number"
-                                name="installationPrice"
-                                className={`form-input ${errors.installationPrice ? 'input-error' : ''}`}
-                                placeholder="0.00"
-                                step="0.01"
-                                value={formData.installationPrice}
-                                onChange={handleChange}
-                                required
-                            />
-                            {errors.installationPrice && <span className="error-message">{errors.installationPrice}</span>}
-                        </div>
-                        <div className="form-group" style={{ flex: 1 }}></div>
-                    </div>
+                             <label>Número de Série *</label>
+                             <input
+                                 type="text"
+                                 name="serialNumber"
+                                 className={`form-input ${errors.serialNumber ? 'input-error' : ''}`}
+                                 placeholder="S/N"
+                                 value={formData.serialNumber}
+                                 onChange={handleChange}
+                                 required
+                             />
+                             {errors.serialNumber && <span className="error-message">{errors.serialNumber}</span>}
+                         </div>
+                     </div>
+ 
+                     <div className="form-row">
+                         <div className="form-group">
+                             <label>Preço de Instalação (R$) *</label>
+                             <input
+                                 type="number"
+                                 name="installationPrice"
+                                 className={`form-input ${errors.installationPrice ? 'input-error' : ''}`}
+                                 placeholder="0.00"
+                                 step="0.01"
+                                 value={formData.installationPrice}
+                                 onChange={handleChange}
+                                 required
+                             />
+                             {errors.installationPrice && <span className="error-message">{errors.installationPrice}</span>}
+                         </div>
+                         <div className="form-group" style={{ flex: 1 }}></div>
+                     </div>
 
                     {selectedTypeFields.length > 0 && (
                         <div className="form-section-title">Especificações Técnicas</div>

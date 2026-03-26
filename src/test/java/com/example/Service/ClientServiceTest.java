@@ -4,11 +4,16 @@ import com.example.DTOs.ClientRequestDTO;
 import com.example.DTOs.ClientResponseDTO;
 import com.example.Models.Client;
 import com.example.Repository.ClientRepository;
+import com.example.Models.Usuario;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
 import java.util.Optional;
@@ -22,6 +27,15 @@ class ClientServiceTest {
     @Mock
     private ClientRepository clientRepository;
 
+    @Mock
+    private TravelCalculationService travelCalculationService;
+
+    @Mock
+    private SecurityContext securityContext;
+
+    @Mock
+    private Authentication authentication;
+
     @InjectMocks
     private ClientService clientService;
 
@@ -30,6 +44,13 @@ class ClientServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        
+        // Mocking Security Context
+        Usuario mockUser = Usuario.builder().id(1L).nome("Admin").role("PROPRIETARIO").build();
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn(mockUser);
+        SecurityContextHolder.setContext(securityContext);
+
         clientActive = Client.builder()
                 .id(1L)
                 .companyName("Empresa Teste")
@@ -37,6 +58,11 @@ class ClientServiceTest {
                 .email("teste@empresa.com")
                 .active(true)
                 .build();
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test

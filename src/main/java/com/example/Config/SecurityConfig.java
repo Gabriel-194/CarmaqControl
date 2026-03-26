@@ -52,6 +52,11 @@ public class SecurityConfig {
         return http.build();
     }
 
+    /**
+     * Filtro para garantir que o token CSRF seja gerado e enviado como cookie 
+     * em cada requisição (necessário para SPAs no Spring Security 6).
+     */
+
     @Bean
     public UrlBasedCorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
@@ -62,7 +67,8 @@ public class SecurityConfig {
             "http://127.0.0.1:5174"
         )); // URL do seu Front React
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
+        config.setAllowedHeaders(List.of("*")); // Volta a permitir tudo para debug
+        config.setExposedHeaders(List.of("X-XSRF-TOKEN"));
         config.setAllowCredentials(true); // PERMITE COOKIES (Importante!)
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
