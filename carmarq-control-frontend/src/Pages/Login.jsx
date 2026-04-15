@@ -2,7 +2,7 @@ import React, { useState } from "react"
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { useAuth } from '../contexts/AuthContext'
-import { Wrench, AlertCircle, Loader2 } from 'lucide-react'
+import { Wrench, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react'
 import '../Styles/Login.css'
 
 export default function Login() {
@@ -10,6 +10,7 @@ export default function Login() {
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
     const [isLoading, setIsLoading] = useState(false)
+    const [showPassword, setShowPassword] = useState(false)
 
     const navigate = useNavigate()
     const { checkAuth } = useAuth() // Pega a função do contexto
@@ -92,15 +93,38 @@ export default function Login() {
 
                         <div className="form-group">
                             <label htmlFor="password">Senha</label>
-                            <input
-                                id="password"
-                                type="password"
-                                className="form-input"
-                                placeholder="••••••••"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                            />
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    id="password"
+                                    type={showPassword ? "text" : "password"}
+                                    className="form-input"
+                                    placeholder="••••••••"
+                                    style={{ paddingRight: '2.5rem' }}
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    className="password-toggle"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    style={{
+                                        position: 'absolute',
+                                        right: '0.75rem',
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        background: 'none',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        color: 'var(--text-muted)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        padding: 0
+                                    }}
+                                >
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
+                            </div>
                         </div>
 
                         <button type="submit" className="btn-primary" disabled={isLoading}>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { DollarSign, AlertCircle, ClipboardList, Loader2, Eye } from 'lucide-react'
 import axios from 'axios'
 import { statusMap } from '../../utils/statusUtils'
+import CardBreakdownTooltip from './CardBreakdownTooltip'
 import '../../Styles/Dashboards.css'
 const API_URL = 'http://localhost:8080/api/dashboard/stats'
 
@@ -80,6 +81,7 @@ export function FinanceiroDashboard() {
             </div>
 
             <div className="dashboard-grid">
+                <CardBreakdownTooltip cardType="revenue" month={month} year={year}>
                 <div className="stat-card">
                     <div className="stat-header">
                         <span className="stat-title">Receita Total</span>
@@ -88,7 +90,9 @@ export function FinanceiroDashboard() {
                     <span className="stat-value" style={{ color: '#10b981' }}>{formatCurrency(stats.totalRevenue)}</span>
                     <span className="stat-desc">Bruto (MoO, Viagem, Km, Peças e Desp)</span>
                 </div>
+                </CardBreakdownTooltip>
 
+                <CardBreakdownTooltip cardType="expenses" month={month} year={year}>
                 <div className="stat-card" style={{ borderLeft: '4px solid #ef4444' }}>
                     <div className="stat-header">
                         <span className="stat-title">Custos Operacionais</span>
@@ -97,7 +101,9 @@ export function FinanceiroDashboard() {
                     <span className="stat-value" style={{ color: '#ef4444' }}>- {formatCurrency(stats.totalExpenses)}</span>
                     <span className="stat-desc">Repasses + Reembolsos integrais</span>
                 </div>
+                </CardBreakdownTooltip>
 
+                <CardBreakdownTooltip cardType="profit" month={month} year={year}>
                 <div className="stat-card" style={{ borderLeft: '4px solid #10b981' }}>
                     <div className="stat-header">
                         <span className="stat-title">Lucro Líquido</span>
@@ -106,6 +112,7 @@ export function FinanceiroDashboard() {
                     <span className="stat-value" style={{ color: '#059669' }}>{formatCurrency(stats.totalProfit)}</span>
                     <span className="stat-desc">Receita líquida da empresa</span>
                 </div>
+                </CardBreakdownTooltip>
 
                 <div className="stat-card" style={{ borderLeft: '4px solid #f59e0b' }}>
                     <div className="stat-header">
@@ -146,7 +153,7 @@ export function FinanceiroDashboard() {
                         stats.recentOrders.map(order => (
                             <li key={order.id} className="list-item">
                                 <div className="item-info">
-                                    <h4>OS #{order.id} — {order.clientName}</h4>
+                                    <h4>#{order.osCode || order.id} {order.numeroChamado ? `— Chamado: ${order.numeroChamado}` : ''} {order.machineSpecs ? `— ${order.machineSpecs}` : ''} — {order.clientName}</h4>
                                     <p>{order.technicianName} • {order.openedAt}</p>
                                 </div>
                                 {order.totalValue ? (

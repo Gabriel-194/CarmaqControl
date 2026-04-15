@@ -1,5 +1,6 @@
 package com.example.Controller;
 
+import com.example.DTOs.CardBreakdownDTO;
 import com.example.DTOs.DashboardStatsDTO;
 import com.example.Service.DashboardService;
 import lombok.RequiredArgsConstructor;
@@ -18,11 +19,21 @@ public class DashboardController {
 
     private final DashboardService dashboardService;
 
-@GetMapping("/stats")
+    @GetMapping("/stats")
     @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO', 'TECNICO')")
     public ResponseEntity<DashboardStatsDTO> getStats(
             @RequestParam(value = "month", required = false) Integer month,
             @RequestParam(value = "year", required = false) Integer year) {
         return ResponseEntity.ok(dashboardService.getStats(month, year));
+    }
+
+    // Detalhamento financeiro por OS para um card específico do dashboard
+    @GetMapping("/card-breakdown")
+    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO', 'TECNICO')")
+    public ResponseEntity<CardBreakdownDTO> getCardBreakdown(
+            @RequestParam("card") String card,
+            @RequestParam(value = "month", required = false) Integer month,
+            @RequestParam(value = "year", required = false) Integer year) {
+        return ResponseEntity.ok(dashboardService.getCardBreakdown(card, month, year));
     }
 }

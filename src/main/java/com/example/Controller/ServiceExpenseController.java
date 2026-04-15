@@ -19,14 +19,14 @@ public class ServiceExpenseController {
     private final ServiceExpenseService serviceExpenseService;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'TECNICO')")
+    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO', 'TECNICO')")
     public ResponseEntity<ServiceExpenseListDTO> getExpenses(
             @PathVariable(name = "serviceOrderId") Long serviceOrderId) {
         return ResponseEntity.ok(serviceExpenseService.getExpensesByServiceOrderId(serviceOrderId));
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'TECNICO')")
+    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO', 'TECNICO')")
     public ResponseEntity<ServiceExpenseResponseDTO> addExpense(
             @PathVariable(name = "serviceOrderId") Long serviceOrderId,
             @Valid @RequestBody ServiceExpenseRequestDTO dto) {
@@ -34,7 +34,7 @@ public class ServiceExpenseController {
     }
 
     @DeleteMapping("/{expenseId}")
-    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'TECNICO')")
+    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO', 'TECNICO')")
     public ResponseEntity<Void> removeExpense(
             @PathVariable(name = "serviceOrderId") Long serviceOrderId,
             @PathVariable(name = "expenseId") Long expenseId) {
@@ -43,7 +43,7 @@ public class ServiceExpenseController {
     }
 
     @PutMapping("/{expenseId}")
-    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'TECNICO')")
+    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO', 'TECNICO')")
     public ResponseEntity<ServiceExpenseResponseDTO> updateExpense(
             @PathVariable(name = "serviceOrderId") Long serviceOrderId,
             @PathVariable(name = "expenseId") Long expenseId,

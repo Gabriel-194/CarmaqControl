@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { ClipboardList, Clock, CheckCircle, Loader2, DollarSign, Wallet, Play, Check } from 'lucide-react'
 import axios from 'axios'
 import { statusMap } from '../../utils/statusUtils'
+import CardBreakdownTooltip from './CardBreakdownTooltip'
 import '../../Styles/Dashboards.css'
 import { toast } from '../ui/Toaster'
 const API_URL = 'http://localhost:8080/api/dashboard/stats'
@@ -84,6 +85,7 @@ export function TecnicoDashboard() {
             </div>
 
             <div className="dashboard-grid">
+                <CardBreakdownTooltip cardType="pending" month={month} year={year}>
                 <div className="stat-card">
                     <div className="stat-header">
                         <span className="stat-title">A Receber</span>
@@ -92,7 +94,9 @@ export function TecnicoDashboard() {
                     <span className="stat-value">{formatCurrency(stats.technicianPendingPayment)}</span>
                     <span className="stat-desc">Aguardando confirmação</span>
                 </div>
+                </CardBreakdownTooltip>
 
+                <CardBreakdownTooltip cardType="earnings" month={month} year={year}>
                 <div className="stat-card">
                     <div className="stat-header">
                         <span className="stat-title">Já Recebido</span>
@@ -101,6 +105,7 @@ export function TecnicoDashboard() {
                     <span className="stat-value" style={{ color: '#10b981' }}>{formatCurrency(stats.technicianEarnings)}</span>
                     <span className="stat-desc">Total acumulado</span>
                 </div>
+                </CardBreakdownTooltip>
 
                 <div className="stat-card">
                     <div className="stat-header">
@@ -131,7 +136,7 @@ export function TecnicoDashboard() {
                         stats.recentOrders.map(order => (
                             <li key={order.id} className="list-item">
                                 <div className="item-info">
-                                    <h4>OS #{order.id} — {order.machineName}</h4>
+                                    <h4>#{order.osCode || order.id} {order.numeroChamado ? `— Chamado: ${order.numeroChamado}` : ''} {order.machineSpecs ? `— ${order.machineSpecs}` : ''} — {order.machineName}</h4>
                                     <p>{order.clientName} • {order.openedAt}</p>
                                 </div>
                                 <div className="item-actions" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>

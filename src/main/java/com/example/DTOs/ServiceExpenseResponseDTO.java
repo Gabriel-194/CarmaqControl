@@ -13,7 +13,7 @@ public class ServiceExpenseResponseDTO {
     private Long id;
     private Long serviceOrderId;
     private String expenseType;
-    private Double quantityKm;
+    private Double quantity;
     private Double value;
     private String description;
     private String expenseTypeLabel; // label em português

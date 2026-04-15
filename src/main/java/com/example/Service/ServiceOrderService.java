@@ -14,8 +14,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
 
 // Serviço principal para Ordens de Serviço — contém regras de negócio e filtragem por role
 @Service
@@ -152,8 +155,10 @@ public class ServiceOrderService {
                 .expensesValue(0.0)
                 .travelValue(travelValue)
                 .displacementValue(displacementValue)
+                .reimbursementValue(dto.getReimbursementValue() != null ? dto.getReimbursementValue() : 0.0)
                 .discountValue(discountValue)
                 .technicianPaymentStatus("A_RECEBER")
+                .osCode(generateOsCode(dto.getServiceDate() != null ? dto.getServiceDate() : LocalDate.now()))
                 .build();
 
         order = serviceOrderRepository.save(order);
@@ -228,8 +233,12 @@ public class ServiceOrderService {
         if (dto.getDiscountValue() != null) {
             order.setDiscountValue(dto.getDiscountValue());
         }
+
+        if (dto.getReimbursementValue() != null) {
+            order.setReimbursementValue(dto.getReimbursementValue());
+        }
         
-        
+
         // travelValue e displacementValue são atualizados via refreshLaborValue e refreshExpensesValue, não manualmente.
 
         // Atualiza o valor das peças (cacheado na entidade)
@@ -257,6 +266,9 @@ public class ServiceOrderService {
         }
 
         if (discountValue != null) {
+            if (discountValue < 0) {
+                throw new RuntimeException("O valor do desconto não pode ser negativo.");
+            }
             order.setDiscountValue(discountValue);
         }
 
@@ -282,6 +294,7 @@ public class ServiceOrderService {
         }
 
         order.setTechnicianPaymentStatus("REJEITADO");
+        order.setStatus("REJEITADA");
         order.setRejectionReason(reason);
         order = serviceOrderRepository.save(order);
         return mapToDTO(order, currentUser.getRole());
@@ -320,10 +333,10 @@ public class ServiceOrderService {
              throw new RuntimeException("Acesso negado.");
         }
 
-        // Regra de Negócio: Admin só pode cancelar. Mudanças operacionais são para técnicos.
-        if ("PROPRIETARIO".equals(currentUser.getRole())) {
-            if (!"CANCELADA".equals(newStatus)) {
-                throw new RuntimeException("Gestores podem apenas cancelar Ordens de Serviço. Mudanças operacionais são permitidas apenas para técnicos.");
+        // Regra de Negócio: Admin/Financeiro podem cancelar, aprovar pagamento ou rejeitar. Mudanças operacionais são para técnicos.
+        if ("PROPRIETARIO".equals(currentUser.getRole()) || "FINANCEIRO".equals(currentUser.getRole())) {
+            if (!"CANCELADA".equals(newStatus) && !"REJEITADA".equals(newStatus) && !"PAGO".equals(newStatus)) {
+                throw new RuntimeException("Gestores e Financeiro podem apenas Cancelar, Rejeitar ou Confirmar Pagamento de Ordens de Serviço.");
             }
         }
 
@@ -335,6 +348,12 @@ public class ServiceOrderService {
             if ("A_RECEBER".equals(order.getTechnicianPaymentStatus())) {
                 order.setTechnicianPaymentStatus("PENDENTE_APROVACAO");
             }
+        }
+        
+        // Se voltou para revisão (ação do técnico), retoma para pendente aprovação
+        if ("EM_REVISAO".equals(newStatus)) {
+            order.setTechnicianPaymentStatus("PENDENTE_APROVACAO");
+            order.setRejectionReason(null);
         }
 
         order = serviceOrderRepository.save(order);
@@ -366,8 +385,11 @@ public class ServiceOrderService {
             rateTrabalho = 185.0;
         }
         
-        // Taxa de deslocamento (Sempre aplicada)
-        double rateDeslocamento = 85.0;
+        // Taxa de deslocamento (85 para Instalação ou Garantia, 185 para o resto)
+        double rateDeslocamento = 185.0;
+        if ("INSTALACAO".equals(order.getServiceType()) || "VALENTIM".equals(order.getManutencaoOrigin())) {
+            rateDeslocamento = 85.0;
+        }
         
         long trabalhoMinutes = 0;
         long deslocamentoMinutes = 0;
@@ -406,15 +428,31 @@ public class ServiceOrderService {
                (order.getTravelValue() != null ? order.getTravelValue() : 0.0) +
                (order.getDisplacementValue() != null ? order.getDisplacementValue() : 0.0) +
                (order.getPartsValue() != null ? order.getPartsValue() : 0.0) +
-               (order.getExpensesValue() != null ? order.getExpensesValue() : 0.0) - discount;
+               (order.getExpensesValue() != null ? order.getExpensesValue() : 0.0) +
+               (order.getReimbursementValue() != null ? order.getReimbursementValue() : 0.0) - discount;
     }
 
     public Double calculateTechnicianPayment(ServiceOrder order) {
-        // Regra Fase 6: Repasse de 10% estritamente sobre Mão de Obra e Tempo de Viagem.
-        // Km (Displacement), Peças e Demais Despesas Reembolsáveis são excluídas da comissão.
-        Double commissionBase = (order.getServiceValue() != null ? order.getServiceValue() : 0.0) +
-                                (order.getTravelValue() != null ? order.getTravelValue() : 0.0);
-        return commissionBase * 0.10;
+        // Nova Regra: Repasse de 10% sobre o Valor Final Faturado (Bruto - Desconto), descontando os impostos (12%) e o boleto (3.50).
+        // Isso serve tanto para Instalação quanto para qualquer Manutenção.
+        Double totalBilled = calculateTotal(order);
+        Double taxValue = totalBilled * 0.12;
+        Double boletoFee = 3.50;
+        
+        Double netBase = totalBilled - (order.getReimbursementValue() != null ? order.getReimbursementValue() : 0.0) - taxValue - boletoFee;
+        if (netBase < 0) {
+            netBase = 0.0;
+        }
+        
+        return (netBase * 0.10) + (order.getReimbursementValue() != null ? order.getReimbursementValue() : 0.0);
+    }
+
+    public Double calculateGrossValue(ServiceOrder order) {
+        return (order.getServiceValue() != null ? order.getServiceValue() : 0.0) +
+               (order.getTravelValue() != null ? order.getTravelValue() : 0.0) +
+               (order.getDisplacementValue() != null ? order.getDisplacementValue() : 0.0) +
+               (order.getPartsValue() != null ? order.getPartsValue() : 0.0) +
+               (order.getExpensesValue() != null ? order.getExpensesValue() : 0.0);
     }
 
 
@@ -427,7 +465,7 @@ public class ServiceOrderService {
                 .clientName(order.getClient() != null ? order.getClient().getCompanyName() : "N/A")
                 .clientAddress(order.getClient() != null ? order.getClient().getAddress() : null)
                 .machineId(order.getMachine() != null ? order.getMachine().getId() : null)
-                .machineName(order.getMachine() != null ? order.getMachine().getModel() : "N/A")
+                .machineName(order.getMachine() != null ? order.getMachine().getMachineType() + " " + order.getMachine().getModel() : "N/A")
                 .machineType(order.getMachine() != null && order.getMachine().getMachineType() != null ? order.getMachine().getMachineType().name() : null)
                 .technicianId(order.getTechnician() != null ? order.getTechnician().getId() : null)
                 .technicianName(order.getTechnician() != null ? order.getTechnician().getNome() : "Não Atribuído")
@@ -442,18 +480,27 @@ public class ServiceOrderService {
                 .manutencaoOrigin(order.getManutencaoOrigin())
                 .numeroChamado(order.getNumeroChamado())
                 .openedAt(order.getOpenedAt())
-                .closedAt(order.getClosedAt());
+                .closedAt(order.getClosedAt())
+                .osCode(ensureOsCode(order));
 
         // Calcula valores dinamicamente
         Double totalValue = calculateTotal(order);
         Double techPayment = calculateTechnicianPayment(order);
+        
+        // Deduções Automáticas (Empresa) calculadas sobre o valor faturado desconsiderando o reembolso 100%
+        Double taxBase = totalValue - (order.getReimbursementValue() != null ? order.getReimbursementValue() : 0.0);
+        Double boletoFee = 3.50;
+        Double taxValue = taxBase * 0.12;
 
         // Controle de visibilidade baseado na role
         if ("TECNICO".equals(role)) {
             builder.technicianPayment(techPayment)
+                   .reimbursementValue(order.getReimbursementValue())
                    .serviceValue(order.getServiceValue())
-                   .travelValue(order.getTravelValue());
-            // Demais valores financeiros (Peças, Km, Despesas Gerais e Lucro) ficam nulos para o técnico
+                   .travelValue(order.getTravelValue())
+                   .partsValue(order.getPartsValue())
+                   .expensesValue(order.getExpensesValue())
+                   .displacementValue(order.getDisplacementValue());
         } else {
             // PROPRIETARIO e FINANCEIRO veem tudo
             builder.serviceValue(order.getServiceValue())
@@ -461,10 +508,13 @@ public class ServiceOrderService {
                     .displacementValue(order.getDisplacementValue())
                     .partsValue(order.getPartsValue())
                     .expensesValue(order.getExpensesValue())
+                    .reimbursementValue(order.getReimbursementValue())
                     .discountValue(order.getDiscountValue())
                     .totalValue(totalValue)
                     .technicianPayment(techPayment)
-                    .netProfit(totalValue - techPayment);
+                    .boletoFee(boletoFee)
+                    .taxValue(taxValue)
+                    .netProfit(totalValue - techPayment - boletoFee - taxValue);
         }
 
         // Adiciona dados logísticos se o cliente tiver coordenadas
@@ -528,6 +578,88 @@ public class ServiceOrderService {
         order.setTechnicianPaymentStatus("RECEBIDO");
         order = serviceOrderRepository.save(order);
         
+        return mapToDTO(order, currentUser.getRole());
+    }
+
+    private synchronized String generateOsCode(LocalDate date) {
+        String datePrefix = "OS" + date.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        Optional<ServiceOrder> lastOrder = serviceOrderRepository.findTopByOsCodeStartingWithOrderByOsCodeDesc(datePrefix);
+        
+        if (lastOrder.isEmpty()) {
+            return datePrefix + "01";
+        }
+        
+        String lastCode = lastOrder.get().getOsCode();
+        try {
+            int sequence = Integer.parseInt(lastCode.substring(10)) + 1;
+            return datePrefix + String.format("%02d", sequence);
+        } catch (Exception e) {
+            // Fallback em caso de erro de parsing
+            return datePrefix + "01";
+        }
+    }
+
+    private String ensureOsCode(ServiceOrder order) {
+        if (order.getOsCode() != null) {
+            return order.getOsCode();
+        }
+        
+        // Se for uma OS antiga sem código, geramos um com base na data de abertura dela
+        // Usamos synchronized aqui também para evitar duplicatas durante a migração lazy
+        synchronized (this) {
+            // Verifica de novo dentro do block synchronized (Double-Checked Locking simplificado)
+            ServiceOrder refreshed = serviceOrderRepository.findById(order.getId()).orElse(order);
+            if (refreshed.getOsCode() != null) return refreshed.getOsCode();
+            
+            LocalDateTime dateTime = refreshed.getOpenedAt() != null ? refreshed.getOpenedAt() : (refreshed.getCreatedAt() != null ? refreshed.getCreatedAt() : LocalDateTime.now());
+            String code = generateOsCode(dateTime.toLocalDate());
+            refreshed.setOsCode(code);
+            serviceOrderRepository.save(refreshed);
+            order.setOsCode(code); // Atualiza o objeto em memória também
+            return code;
+        }
+    }
+
+    public ServiceOrderResponseDTO updateReimbursement(Long id, Double value) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario currentUser = (Usuario) auth.getPrincipal();
+
+        ServiceOrder order = serviceOrderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("OS não encontrada."));
+
+        if ("TECNICO".equals(currentUser.getRole()) && !order.getTechnician().getId().equals(currentUser.getId())) {
+            throw new RuntimeException("Acesso negado: você só pode alterar reembolsos de suas próprias ordens de serviço.");
+        }
+
+        if ("PAGO".equals(order.getStatus()) || "CANCELADA".equals(order.getStatus())) {
+            throw new RuntimeException("Não é possível alterar o reembolso de uma OS finalizada ou cancelada.");
+        }
+
+        order.setReimbursementValue(value != null ? value : 0.0);
+        serviceOrderRepository.save(order);
+
+        return mapToDTO(order, currentUser.getRole());
+    }
+
+    // Libera uma OS em inspeção, voltando ao status ABERTA (ação exclusiva do Proprietário)
+    @Transactional
+    public ServiceOrderResponseDTO releaseInspection(Long id) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario currentUser = (Usuario) auth.getPrincipal();
+
+        if (!"PROPRIETARIO".equals(currentUser.getRole())) {
+            throw new RuntimeException("Apenas o Proprietário pode liberar uma OS em inspeção.");
+        }
+
+        ServiceOrder order = serviceOrderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Ordem de serviço não encontrada com id " + id));
+
+        if (!"REQUER_INSPECAO".equals(order.getStatus())) {
+            throw new RuntimeException("Apenas OS com status 'Requer Inspeção' podem ser liberadas.");
+        }
+
+        order.setStatus("ABERTA");
+        order = serviceOrderRepository.save(order);
         return mapToDTO(order, currentUser.getRole());
     }
 }

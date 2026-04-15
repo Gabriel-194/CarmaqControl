@@ -3,6 +3,7 @@ import Sidebar from '../Components/Sidebar'
 import { toast } from '../Components/ui/Toaster'
 import { Plus, Trash2, UserPlus, Pencil, X, RefreshCw } from 'lucide-react'
 import axios from 'axios'
+import { maskPhone } from '../utils/masks'
 import '../Styles/Usuarios.css'
 
 export default function Usuarios() {
@@ -12,6 +13,7 @@ export default function Usuarios() {
 
     // Estado para controlar se é Edição ou Criação
     const [editingUser, setEditingUser] = useState(null)
+    const [activeTab, setActiveTab] = useState('ativos')
 
     // Form do usuário
     const [formData, setFormData] = useState({ nome: '', email: '', telefone: '', role: 'TECNICO', senha: '' })
@@ -125,11 +127,28 @@ export default function Usuarios() {
                     </button>
                 </header>
 
+                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid #ddd' }}>
+                    <button 
+                        onClick={() => setActiveTab('ativos')}
+                        style={{ padding: '0.5rem 1rem', background: 'none', border: 'none', borderBottom: activeTab === 'ativos' ? '2px solid var(--primary-color)' : 'none', fontWeight: activeTab === 'ativos' ? 'bold' : 'normal', color: activeTab === 'ativos' ? 'var(--primary-color)' : '#666', cursor: 'pointer' }}
+                    >
+                        Ativos
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('inativos')}
+                        style={{ padding: '0.5rem 1rem', background: 'none', border: 'none', borderBottom: activeTab === 'inativos' ? '2px solid var(--primary-color)' : 'none', fontWeight: activeTab === 'inativos' ? 'bold' : 'normal', color: activeTab === 'inativos' ? 'var(--primary-color)' : '#666', cursor: 'pointer' }}
+                    >
+                        Inativos
+                    </button>
+                </div>
+
                 {loading ? (
-                    <p>Carregando...</p>
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
+                        <p>Carregando...</p>
+                    </div>
                 ) : (
                     <div className="users-grid">
-                        {usuarios.map(user => (
+                        {usuarios.filter(u => activeTab === 'ativos' ? u.ativo : !u.ativo).map(user => (
                             <div key={user.id} className="user-card">
                                 <div className="user-avatar-large">
                                     {user.nome[0].toUpperCase()}
@@ -215,8 +234,9 @@ export default function Usuarios() {
                                         type="text"
                                         className="form-input"
                                         placeholder="(00) 00000-0000"
-                                        value={formData.telefone}
-                                        onChange={e => setFormData({...formData, telefone: e.target.value})}
+                                        value={formData.telefone || ''}
+                                        onChange={e => setFormData({...formData, telefone: maskPhone(e.target.value)})}
+                                        maxLength={15}
                                     />
                                 </div>
                                 <div className="form-group">

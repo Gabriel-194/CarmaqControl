@@ -20,10 +20,9 @@ export default function ListaPecas({ serviceOrderId, orderStatus, onUpdate }) {
 
     const [totalPecas, setTotalPecas] = useState(0)
     
-    // Travas: Peças só podem ser editadas/adicionadas em ANDAMENTO
-    // Mas se estiver PAGO ou CANCELADA, o bloqueio é total.
-    const isEditable = orderStatus === 'EM_ANDAMENTO'
+    // Travas: Peças podem ser editadas/adicionadas em qualquer status não finalizado.
     const isLocked = orderStatus === 'PAGO' || orderStatus === 'CANCELADA'
+    const isEditable = !isLocked
 
     const fetchParts = async () => {
         try {
@@ -155,7 +154,7 @@ export default function ListaPecas({ serviceOrderId, orderStatus, onUpdate }) {
                     fontWeight: '500'
                 }}>
                     <Lock size={18} />
-                    <span>{isLocked ? `OS ${orderStatus} - Edição bloqueada` : 'Edição de peças permitida apenas em Andamento'}</span>
+                    <span>{isLocked ? `OS ${orderStatus} - Edição bloqueada` : 'Edição permitida'}</span>
                 </div>
             )}
 

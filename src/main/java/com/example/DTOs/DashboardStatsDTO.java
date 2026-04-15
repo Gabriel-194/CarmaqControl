@@ -34,6 +34,8 @@ public class DashboardStatsDTO {
     // Métricas financeiras do técnico (somente para TECNICO)
     private Double technicianEarnings;      // Total que o técnico já recebeu
     private Double technicianPendingPayment; // Total que o técnico tem a receber
+    private Double technicianCommissions;    // Ganho (10% MO + Viagem)
+    private Double technicianReimbursements; // Reembolso (Despesas/Expenses)
 
     // Métricas de equipe (somente para PROPRIETARIO)
     private Long totalTechnicians;
@@ -49,8 +51,11 @@ public class DashboardStatsDTO {
     @AllArgsConstructor
     public static class RecentOrderDTO {
         private Long id;
+        private String osCode;
+        private String numeroChamado;
         private String clientName;
         private String machineName;
+        private String machineSpecs;
         private String status;
         private String technicianName;
         private Double totalValue;

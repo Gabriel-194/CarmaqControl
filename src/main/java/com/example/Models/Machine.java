@@ -22,14 +22,11 @@ public class Machine {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Nome identificador da máquina
-    @Column(nullable = false, length = 150)
-    private String name;
-
     // Tipo da máquina (discriminador central)
     @Enumerated(EnumType.STRING)
     @Column(name = "machine_type", nullable = false)
     private MachineTypeEnum machineType;
+
 
     // Modelo da máquina
     @Column(nullable = false, length = 150)
@@ -49,7 +46,7 @@ public class Machine {
 
     // --- CAMPOS ESPECÍFICOS (Nullable na DB, validados por tipo no frontend) ---
 
-    // LASER / GRAVADORA_LASER
+    // LASER_CHAPA / LASER_TUBO / GRAVADORA_LASER
     @Column(name = "laser_size")
     private String laserSize;
 

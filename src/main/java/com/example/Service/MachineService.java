@@ -49,7 +49,6 @@ public class MachineService {
     @Transactional
     public MachineResponseDTO createMachine(MachineRequestDTO dto) {
         Machine machine = Machine.builder()
-                .name(dto.getName())
                 .machineType(dto.getMachineType())
                 .model(dto.getModel())
                 .serialNumber(dto.getSerialNumber())
@@ -75,7 +74,6 @@ public class MachineService {
     public MachineResponseDTO updateMachine(Long id, MachineRequestDTO dto) {
         Machine machine = findActiveById(id);
 
-        machine.setName(dto.getName());
         machine.setMachineType(dto.getMachineType());
         machine.setModel(dto.getModel());
         machine.setSerialNumber(dto.getSerialNumber());
@@ -119,7 +117,6 @@ public class MachineService {
     private MachineResponseDTO mapToDTO(Machine machine) {
         return MachineResponseDTO.builder()
                 .id(machine.getId())
-                .name(machine.getName())
                 .machineType(machine.getMachineType())
                 .model(machine.getModel())
                 .serialNumber(machine.getSerialNumber())

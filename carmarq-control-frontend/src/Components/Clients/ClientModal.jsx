@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { maskPhone, maskCNPJ, maskCEP } from '../../utils/masks';
 
 const API_URL = 'http://localhost:8080/api/clients';
 
@@ -41,6 +42,18 @@ const ClientModal = ({ isOpen, onClose, client }) => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    // Handler com máscara de telefone — suporta fixo e celular
+    const handlePhoneChange = (e) => {
+        const masked = maskPhone(e.target.value)
+        setFormData(prev => ({ ...prev, phone: masked }))
+    }
+
+    // Handler com máscara de CNPJ
+    const handleCnpjChange = (e) => {
+        const masked = maskCNPJ(e.target.value)
+        setFormData(prev => ({ ...prev, cnpj: masked }))
+    }
+
     const handleCnpjSearch = async () => {
         const cnpj = formData.cnpj.replace(/\D/g, '');
         if (cnpj.length !== 14) {
@@ -63,9 +76,9 @@ const ClientModal = ({ isOpen, onClose, client }) => {
             setFormData(prev => ({
                 ...prev,
                 companyName: data.razao_social || prev.companyName,
-                cnpj: data.estabelecimento.cnpj || prev.cnpj,
+                cnpj: maskCNPJ(data.estabelecimento.cnpj || prev.cnpj),
                 ie: ieEncontrada || prev.ie,
-                cep: data.estabelecimento.cep || prev.cep,
+                cep: maskCEP(data.estabelecimento.cep || prev.cep),
                 address: `${data.estabelecimento.tipo_logradouro} ${data.estabelecimento.logradouro}, ${data.estabelecimento.numero}${data.estabelecimento.complemento ? ' - ' + data.estabelecimento.complemento : ''}, ${data.estabelecimento.bairro}, ${data.estabelecimento.cidade.nome} - ${data.estabelecimento.estado.sigla}`,
             }));
 
@@ -94,13 +107,8 @@ const ClientModal = ({ isOpen, onClose, client }) => {
     };
 
     const handleCepChange = async (e) => {
-        let cep = e.target.value.replace(/\D/g, '');
-        if (cep.length > 8) cep = cep.slice(0, 8);
-        
-        let formattedCep = cep;
-        if (cep.length >= 5) {
-            formattedCep = cep.slice(0, 5) + '-' + cep.slice(5);
-        }
+        const formattedCep = maskCEP(e.target.value)
+        const cep = formattedCep.replace(/\D/g, '')
 
         setFormData(prev => ({ ...prev, cep: formattedCep }));
 
@@ -174,9 +182,10 @@ const ClientModal = ({ isOpen, onClose, client }) => {
                                     type="text" 
                                     name="cnpj" 
                                     value={formData.cnpj} 
-                                    onChange={handleChange} 
+                                    onChange={handleCnpjChange} 
                                     placeholder="00.000.000/0000-00" 
-                                    className="modal-input" 
+                                    className="modal-input"
+                                    maxLength={18}
                                 />
                                 <button 
                                     type="button" 
@@ -210,7 +219,15 @@ const ClientModal = ({ isOpen, onClose, client }) => {
                     </div>
                     <div className="modal-form-group">
                         <label>Telefone</label>
-                        <input type="text" name="phone" value={formData.phone} onChange={handleChange} className="modal-input" />
+                        <input
+                            type="text"
+                            name="phone"
+                            value={formData.phone}
+                            onChange={handlePhoneChange}
+                            className="modal-input"
+                            placeholder="(00) 00000-0000"
+                            maxLength={15}
+                        />
                     </div>
                     <div className="modal-form-group">
                         <label>CEP</label>

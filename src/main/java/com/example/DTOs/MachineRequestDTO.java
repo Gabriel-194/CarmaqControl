@@ -16,12 +16,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class MachineRequestDTO {
 
-    @NotBlank(message = "Nome da máquina é obrigatório")
-    @Size(max = 150, message = "Nome não pode exceder 150 caracteres")
-    private String name;
-
     @NotNull(message = "Tipo da máquina é obrigatório")
     private MachineTypeEnum machineType;
+
 
     @NotBlank(message = "Modelo é obrigatório")
     @Size(max = 150, message = "Modelo não pode exceder 150 caracteres")

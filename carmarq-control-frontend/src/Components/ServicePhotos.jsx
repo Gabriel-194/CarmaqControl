@@ -11,8 +11,8 @@ export default function ServicePhotos({ serviceOrderId, orderStatus }) {
     const [photos, setPhotos] = useState([])
     const [uploading, setUploading] = useState(false)
 
-    // Regra de bloqueio baseada no novo texto de status
-    const isEditable = orderStatus === 'EM_ANDAMENTO'
+    // Regra de bloqueio: permite em qualquer status exceto se faturado (PAGO)
+    const isEditable = orderStatus !== 'PAGO'
 
     const fetchPhotos = async () => {
         try {
@@ -92,7 +92,7 @@ export default function ServicePhotos({ serviceOrderId, orderStatus }) {
                     fontWeight: '500' // Fonte ligeiramente mais forte
                 }}>
                     <Lock size={18} />
-                    <span>Upload de fotos bloqueado (OS deve estar em Andamento)</span>
+                    <span>{orderStatus === 'PAGO' ? 'OS Paga - Upload de fotos bloqueado' : 'Upload de fotos permitido'}</span>
                 </div>
             )}
 

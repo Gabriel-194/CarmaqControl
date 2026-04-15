@@ -29,9 +29,9 @@ public class ServiceExpense {
     @Column(name = "expense_type", nullable = false)
     private ExpenseTypeEnum expenseType;
 
-    // Usado apenas para DESLOCAMENTO_KM
+    // Usado para DESLOCAMENTO_KM (km), HOSPEDAGEM/ALIMENTACAO (dias), PEDAGIO (qtd)
     @Column(name = "quantity_km")
-    private Double quantityKm;
+    private Double quantity;
 
     // Valor final da despesa (calculado para km, manual para outros)
     @Column(nullable = false)

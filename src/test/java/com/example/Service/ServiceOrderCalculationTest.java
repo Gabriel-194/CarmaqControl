@@ -23,10 +23,9 @@ public class ServiceOrderCalculationTest {
         Double total = serviceOrderService.calculateTotal(os);
         assertEquals(2050.0, total, 0.01, "O valor total faturado deve ser 2050.0");
 
-        // Repasse Técnico (10%) = (1000 + 200) * 0.10 = 120.0
-        // Peças, Km e Despesas são ignorados na comissão
+        // Repasse Técnico (10%) sob Valor Líquido = (2050 - 12% - 3.5) * 10% = 180.05
         Double technicianPayment = serviceOrderService.calculateTechnicianPayment(os);
-        assertEquals(120.0, technicianPayment, 0.01, "O repasse técnico deve ser 120.0 (10% de MoO + Viagem)");
+        assertEquals(180.05, technicianPayment, 0.01, "O repasse técnico deve ser 180.05 (10% de faturamento líquido)");
     }
 
     @Test
@@ -39,6 +38,6 @@ public class ServiceOrderCalculationTest {
         assertEquals(150.0, total, 0.01);
         
         Double payment = serviceOrderService.calculateTechnicianPayment(os);
-        assertEquals(15.0, payment, 0.01);
+        assertEquals(12.85, payment, 0.01);
     }
 }

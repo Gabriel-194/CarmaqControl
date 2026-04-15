@@ -1,39 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { X, Save } from 'lucide-react'
 
-// Mapeamento de tipo para campos técnicos específicos
-const fieldsByType = {
-    LASER: ['laserSize', 'laserKind', 'laserPower'],
-    DOBRADEIRA: ['machineSize', 'tonnage', 'command'],
-    GUILHOTINA: ['machineSize', 'tonnage', 'command'],
-    CURVADORA_TUBO: ['machineSize', 'command', 'force', 'diameter'],
-    METALEIRA: ['machineSize', 'tonnage'],
-    CALANDRA: ['machineSize', 'command', 'force', 'diameter', 'rollerCount'],
-    GRAVADORA_LASER: ['machineSize', 'laserPower'],
-}
-
-// Labels amigáveis em português
-const typeLabels = {
-    LASER: 'Laser',
-    DOBRADEIRA: 'Dobradeira',
-    GUILHOTINA: 'Guilhotina',
-    CURVADORA_TUBO: 'Curvadora de Tubo',
-    METALEIRA: 'Metaleira',
-    CALANDRA: 'Calandra',
-    GRAVADORA_LASER: 'Gravadora a Laser',
-}
-
-const fieldLabels = {
-    laserSize: 'Tamanho da Mesa',
-    laserKind: 'Tipo (Fechada / Aberta)',
-    laserPower: 'Potência (W)',
-    machineSize: 'Tamanho',
-    tonnage: 'Tonelagem',
-    command: 'Comando',
-    force: 'Força',
-    diameter: 'Diâmetro máximo (mm)',
-    rollerCount: 'Quantidade de Rolos',
-}
+import { typeLabels, fieldLabels, fieldsByType } from '../../Constants/MachineConstants'
 
 const fieldPlaceholders = {
     laserSize: 'Ex: 3000x1500mm',
@@ -48,7 +16,6 @@ const fieldPlaceholders = {
 
 export default function MachineModal({ machine, onClose, onSave, errors = {} }) {
     const [formData, setFormData] = useState({
-        name: '',
         machineType: '',
         model: '',
         serialNumber: '',
@@ -68,7 +35,6 @@ export default function MachineModal({ machine, onClose, onSave, errors = {} }) 
     useEffect(() => {
         if (machine) {
             setFormData({
-                name: machine.name || '',
                 machineType: machine.machineType || '',
                 model: machine.model || '',
                 serialNumber: machine.serialNumber || '',
@@ -95,16 +61,31 @@ export default function MachineModal({ machine, onClose, onSave, errors = {} }) 
     const handleSubmit = (e) => {
         e.preventDefault()
         
-        // Limpa campos que não pertencem ao tipo selecionado antes de enviar
-        const cleanedData = { ...formData }
+        // 1. Iniciar os dados com os campos comuns obrigatórios
+        const cleanedData = {
+            machineType: formData.machineType,
+            model: formData.model,
+            serialNumber: formData.serialNumber,
+            installationPrice: formData.installationPrice === '' ? null : Number(formData.installationPrice),
+            description: formData.description
+        }
+        
+        // 2. Adicionar apenas os campos técnicos permitidos para esse tipo
         const allowedFields = fieldsByType[formData.machineType] || []
         
-        Object.keys(fieldsByType).forEach(type => {
-            fieldsByType[type].forEach(field => {
-                if (!allowedFields.includes(field)) {
-                    delete cleanedData[field]
-                }
-            })
+        allowedFields.forEach(field => {
+            const value = formData[field]
+            
+            // Campos numéricos técnicos
+            const numericFields = ['laserPower', 'tonnage', 'force', 'diameter', 'rollerCount']
+            
+            if (numericFields.includes(field)) {
+                cleanedData[field] = (value === '' || value === null || value === undefined) 
+                    ? null 
+                    : Number(value)
+            } else {
+                cleanedData[field] = value
+            }
         })
 
         onSave(cleanedData)
@@ -140,20 +121,8 @@ export default function MachineModal({ machine, onClose, onSave, errors = {} }) 
                             </select>
                             {errors.machineType && <span className="error-message">{errors.machineType}</span>}
                         </div>
-                        <div className="form-group">
-                            <label>Nome Identificador *</label>
-                            <input
-                                type="text"
-                                name="name"
-                                className={`form-input ${errors.name ? 'input-error' : ''}`}
-                                placeholder="Ex: Laser 01, Dobradeira Sul"
-                                value={formData.name}
-                                onChange={handleChange}
-                                required
-                            />
-                            {errors.name && <span className="error-message">{errors.name}</span>}
-                        </div>
                     </div>
+
 
                     <div className="form-row">
                         <div className="form-group">

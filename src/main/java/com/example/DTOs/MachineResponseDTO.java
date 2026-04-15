@@ -15,7 +15,6 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class MachineResponseDTO {
     private Long id;
-    private String name;
     private MachineTypeEnum machineType;
     private String model;
     private String serialNumber;

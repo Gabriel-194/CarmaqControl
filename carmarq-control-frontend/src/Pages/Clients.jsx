@@ -3,6 +3,7 @@ import Sidebar from '../Components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 import ClientModal from '../Components/Clients/ClientModal';
+import ClientTooltip from '../Components/Clients/ClientTooltip';
 import '../Styles/dashboard.css';
 import '../Styles/Clients.css'; // Novo import
 
@@ -16,6 +17,11 @@ const Clients = () => {
     const [editingClient, setEditingClient] = useState(null);
     const [showInactive, setShowInactive] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Tooltip state
+    const [hoveredClient, setHoveredClient] = useState(null);
+    const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+    const [hoverTimeout, setHoverTimeout] = useState(null);
 
     const isOwner = user?.role === 'PROPRIETARIO';
     const canAdd = user?.role === 'PROPRIETARIO' || user?.role === 'TECNICO';
@@ -81,6 +87,24 @@ const Clients = () => {
         client.cnpj?.includes(searchTerm)
     );
 
+    // Tooltip handlers
+    const handleMouseEnter = (client) => {
+        const timeout = setTimeout(() => {
+            setHoveredClient(client);
+        }, 400);
+        setHoverTimeout(timeout);
+    };
+
+    const handleMouseLeave = () => {
+        if (hoverTimeout) clearTimeout(hoverTimeout);
+        setHoveredClient(null);
+        setHoverTimeout(null);
+    };
+
+    const handleMouseMove = (e) => {
+        setMousePos({ x: e.clientX, y: e.clientY });
+    };
+
     return (
         <div className="dashboard-layout">
             <Sidebar />
@@ -129,7 +153,13 @@ const Clients = () => {
                             </thead>
                             <tbody>
                                 {filteredClients.map(client => (
-                                    <tr key={client.id} style={{ opacity: client.active ? 1 : 0.6 }}>
+                                    <tr 
+                                        key={client.id} 
+                                        style={{ opacity: client.active ? 1 : 0.6 }}
+                                        onMouseEnter={() => handleMouseEnter(client)}
+                                        onMouseLeave={handleMouseLeave}
+                                        onMouseMove={handleMouseMove}
+                                    >
                                         <td className="td-company">{client.companyName}</td>
                                         <td className="td-contact">{client.contactName}</td>
                                         <td>
@@ -167,6 +197,10 @@ const Clients = () => {
                 </div>
 
                 {modalOpen && <ClientModal isOpen={modalOpen} onClose={handleCloseModal} client={editingClient} />}
+
+                {hoveredClient && (
+                    <ClientTooltip client={hoveredClient} position={mousePos} />
+                )}
             </main>
         </div>
     );

@@ -13,3 +13,5 @@
     - [ ] Fase 11: Dashboard de Lucratividade para Proprietários
     - [x] Fase 12: Hardening: Correção de BOLA e Mass Assignment (Vulnerabilidades 1, 2 e 3)
     - [ ] Fase 13: Hardening: Infraestrutura, Concorrência e CSRF (Vulnerabilidades 4, 5 e 6)
+    - [x] Fase 14: Correções de Regras de Negócio e Auditoria de Segurança
+    - [/] Fase 15: Correção de Regressão: Exportação de PDF [/]

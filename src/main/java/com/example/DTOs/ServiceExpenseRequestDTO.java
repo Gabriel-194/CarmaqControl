@@ -17,7 +17,7 @@ public class ServiceExpenseRequestDTO {
     @NotNull(message = "O tipo da despesa é obrigatório")
     private ExpenseTypeEnum expenseType;
 
-    private Double quantityKm;   // obrigatório se DESLOCAMENTO_KM
+    private Double quantity; // obrigatório se DESLOCAMENTO_KM, informa dias em HOSPEDAGEM/ALIMENTACAO e qtd em PEDAGIO
     
     private Double value;        // obrigatório se NOT DESLOCAMENTO_KM
     

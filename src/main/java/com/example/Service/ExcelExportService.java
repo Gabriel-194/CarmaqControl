@@ -29,9 +29,10 @@ public class ExcelExportService {
 
             Row headerRow = sheet.createRow(0);
             String[] headers = {
-                "OS ID", "Data", "Status", "Cliente", "CNPJ", "Máquina", 
+                "Código", "Data", "Status", "Cliente", "CNPJ", "Máquina", 
                 "Tipo Serviço", "Técnico Responsável", "Pgto Técnico", 
-                "Base (Mão de Obra)", "Despesas", "Peças", "Desconto Aplicado", "Valor Total Cobrado", "Motivo de Rejeição Repasse"
+                "Base (Mão de Obra)", "Viagem", "Deslocamento (Km)", "Peças", "Despesas", "Desconto Aplicado", 
+                "Total Bruto", "Valor Faturado", "Taxa Boleto", "Impostos (12%)", "Lucro Líquido", "Motivo de Rejeição Repasse"
             };
 
             for (int i = 0; i < headers.length; i++) {
@@ -44,7 +45,7 @@ public class ExcelExportService {
             for (ServiceOrder order : orders) {
                 Row row = sheet.createRow(rowIdx++);
 
-                row.createCell(0).setCellValue(order.getId());
+                row.createCell(0).setCellValue(order.getOsCode() != null ? order.getOsCode() : order.getId().toString());
                 row.createCell(1).setCellValue(order.getOpenedAt() != null ? order.getOpenedAt().format(DATE_FORMATTER) : "N/A");
                 row.createCell(2).setCellValue(order.getStatus());
                 row.createCell(3).setCellValue(order.getClient() != null ? order.getClient().getCompanyName() : "N/A");
@@ -54,20 +55,38 @@ public class ExcelExportService {
                 row.createCell(7).setCellValue(order.getTechnician() != null ? order.getTechnician().getNome() : "N/A");
                 row.createCell(8).setCellValue(order.getTechnicianPaymentStatus());
                 
-                row.createCell(9).setCellValue(order.getServiceValue() != null ? order.getServiceValue() : 0.0);
+                double mo = order.getServiceValue() != null ? order.getServiceValue() : 0.0;
+                double viagem = order.getTravelValue() != null ? order.getTravelValue() : 0.0;
+                double km = order.getDisplacementValue() != null ? order.getDisplacementValue() : 0.0;
+                double pecas = order.getPartsValue() != null ? order.getPartsValue() : 0.0;
+                double despesas = order.getExpensesValue() != null ? order.getExpensesValue() : 0.0;
+                double desconto = order.getDiscountValue() != null ? order.getDiscountValue() : 0.0;
+
+                double bruto = mo + viagem + km + pecas + despesas;
+                double faturado = bruto - desconto;
                 
-                double expenses = (order.getExpensesValue() != null ? order.getExpensesValue() : 0.0);
-                row.createCell(10).setCellValue(expenses);
+                double boleto = 3.50;
+                double imposto = faturado * 0.12;
                 
-                row.createCell(11).setCellValue(order.getPartsValue() != null ? order.getPartsValue() : 0.0);
+                // Repasse Técnico (10% sobre o Faturado descontando Impostos e Boleto)
+                double netBase = faturado - imposto - boleto;
+                if (netBase < 0) netBase = 0.0;
+                double repasse = netBase * 0.10;
                 
-                double discount = order.getDiscountValue() != null ? order.getDiscountValue() : 0.0;
-                row.createCell(12).setCellValue(discount);
-                
-                double total = (order.getServiceValue() != null ? order.getServiceValue() : 0.0) + expenses + (order.getPartsValue() != null ? order.getPartsValue() : 0.0) - discount;
-                row.createCell(13).setCellValue(total);
-                
-                row.createCell(14).setCellValue(order.getRejectionReason() != null ? order.getRejectionReason() : "");
+                double lucro = faturado - repasse - boleto - imposto;
+
+                row.createCell(9).setCellValue(mo);
+                row.createCell(10).setCellValue(viagem);
+                row.createCell(11).setCellValue(km);
+                row.createCell(12).setCellValue(pecas);
+                row.createCell(13).setCellValue(despesas);
+                row.createCell(14).setCellValue(desconto);
+                row.createCell(15).setCellValue(bruto);
+                row.createCell(16).setCellValue(faturado);
+                row.createCell(17).setCellValue(boleto);
+                row.createCell(18).setCellValue(imposto);
+                row.createCell(19).setCellValue(lucro);
+                row.createCell(20).setCellValue(order.getRejectionReason() != null ? order.getRejectionReason() : "");
             }
 
             for (int i = 0; i < headers.length; i++) {
@@ -103,7 +122,7 @@ public class ExcelExportService {
 
             // Cabeçalho Oficial
             Row r0 = sheet.createRow(0);
-            r0.createCell(0).setCellValue("ORDEM DE SERVIÇO: OS" + order.getId());
+            r0.createCell(0).setCellValue("ORDEM DE SERVIÇO: " + (order.getOsCode() != null ? order.getOsCode() : order.getId()));
             r0.getCell(0).setCellStyle(titleStyle);
             
             Row r1 = sheet.createRow(1);
@@ -175,7 +194,7 @@ public class ExcelExportService {
             r0.getCell(0).setCellStyle(titleStyle);
 
             sheet.createRow(2).createCell(0).setCellValue("Cliente: " + order.getClient().getCompanyName());
-            sheet.createRow(3).createCell(0).setCellValue("OS: " + order.getId());
+            sheet.createRow(3).createCell(0).setCellValue("OS: " + (order.getOsCode() != null ? order.getOsCode() : order.getId()));
             sheet.createRow(4).createCell(0).setCellValue("Efetuado por: " + order.getTechnician().getNome());
             sheet.createRow(5).createCell(0).setCellValue("DATA: " + java.time.LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
             sheet.createRow(6).createCell(0).setCellValue("Veículo: ________  Placa: ________  Cidade: ________");
@@ -210,15 +229,17 @@ public class ExcelExportService {
                     if (fr.equals("Hotel") && typeStr.equals("HOSPEDAGEM")) match = true;
                     if (fr.equals("Passagem Aérea") && typeStr.equals("PASSAGEM")) match = true;
                     if (fr.equals("Pedágio") && typeStr.equals("PEDAGIO")) match = true;
-                    if (fr.equals("Quilometragem") && typeStr.equals("DESLOCAMENTO_KM")) {
-                        match = true;
-                        if (e.getQuantityKm() != null) qtd = e.getQuantityKm();
-                    }
+                    if (fr.equals("Quilometragem") && typeStr.equals("DESLOCAMENTO_KM")) match = true;
                     if (fr.equals("Desp. com Material") && typeStr.equals("MATERIAL")) match = true;
-                    if (fr.equals("Outros") && typeStr.equals("OUTROS")) match = true;
+                    if (fr.equals("Outros") && (typeStr.equals("OUTROS") || typeStr.equals("OUTRO"))) match = true;
                     
                     if (match) {
                         val += e.getValue();
+                        if (e.getQuantity() != null) {
+                            // Se for a primeira vez ou se for um tipo que acumula quantidade (como dias ou km)
+                            if (qtd == 1.0) qtd = e.getQuantity();
+                            else qtd += e.getQuantity();
+                        }
                     }
                 }
                 

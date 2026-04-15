@@ -9,6 +9,17 @@ import '../Styles/Ordens.css'
 
 const API_URL = 'http://localhost:8080/api/service-orders'
 
+const typeLabels = {
+    LASER_CHAPA: 'Laser Chapa',
+    LASER_TUBO: 'Laser Tubo',
+    DOBRADEIRA: 'Dobradeira',
+    GUILHOTINA: 'Guilhotina',
+    CURVADORA_TUBO: 'Curvadora de Tubo',
+    METALEIRA: 'Metaleira',
+    CALANDRA: 'Calandra',
+    GRAVADORA_LASER: 'Gravadora a Laser',
+}
+
 // Página de listagem de Ordens de Serviço — conectada com API real
 export default function Ordens() {
     const navigate = useNavigate()
@@ -110,7 +121,7 @@ export default function Ordens() {
                         <Search className="search-icon" />
                         <input
                             type="text"
-                            placeholder="Buscar por cliente, chamado, ID ou técnico..."
+                            placeholder="Buscar por cliente, chamado, código OS, técnico ou tipo de máquina..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="search-input"
@@ -191,7 +202,7 @@ export default function Ordens() {
                         <table className="data-table">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
+                                    <th>Código</th>
                                     <th>Chamado</th>
                                     <th>Cliente</th>
                                     <th>Tipo</th>
@@ -199,14 +210,21 @@ export default function Ordens() {
                                     <th>Máquina</th>
                                     <th>Técnico</th>
                                     <th>Data</th>
-                                    {(user?.role === 'PROPRIETARIO' || user?.role === 'FINANCEIRO') && <th>Lucro (R$)</th>}
+                                    {(user?.role === 'PROPRIETARIO' || user?.role === 'FINANCEIRO') ? (
+                                        <>
+                                            <th style={{ textAlign: 'right' }}>Total (R$)</th>
+                                            <th style={{ textAlign: 'right' }}>Lucro (R$)</th>
+                                        </>
+                                    ) : (
+                                        <th style={{ textAlign: 'right' }}>Seu Pagamento (R$)</th>
+                                    )}
                                     <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {filtered.map((os) => (
                                     <tr key={os.id} onClick={() => navigate(`/ordens/${os.id}`)}>
-                                        <td>#{os.id}</td>
+                                        <td className="font-bold">{os.osCode || `#${os.id}`}</td>
                                         <td className="font-mono" style={{ fontSize: '0.85rem' }}>{os.numeroChamado || '—'}</td>
                                         <td className="font-bold">{os.clientName}</td>
                                         <td>
@@ -222,22 +240,29 @@ export default function Ordens() {
                                             </span>
                                         </td>
                                         <td>
-                                            {os.serviceType === 'MANUTENCAO' ? (
-                                                <span style={{ 
-                                                    fontSize: '0.75rem', 
-                                                    color: os.manutencaoOrigin === 'VALENTIM' ? '#059669' : '#0284c7',
-                                                    fontWeight: '500'
-                                                }}>
-                                                    {os.manutencaoOrigin === 'VALENTIM' ? 'Garantia' : 'Carmarq'}
-                                                </span>
-                                            ) : '—'}
+                                            <span style={{ 
+                                                fontSize: '0.75rem', 
+                                                color: (os.serviceType === 'INSTALACAO' || os.manutencaoOrigin === 'VALENTIM') ? '#059669' : '#0284c7',
+                                                fontWeight: '700'
+                                            }}>
+                                                {os.serviceType === 'INSTALACAO' ? 'VALENTIM' : (os.manutencaoOrigin === 'VALENTIM' ? 'VALENTIM' : 'CARMARQ')}
+                                            </span>
                                         </td>
-                                        <td>{os.machineName}</td>
+                                        <td>{typeLabels[os.machineType] || os.machineType || os.machineName}</td>
                                         <td>{os.technicianName}</td>
                                         <td style={{ whiteSpace: 'nowrap' }}>{formatDate(os.serviceDate)}</td>
-                                        {(user?.role === 'PROPRIETARIO' || user?.role === 'FINANCEIRO') && (
-                                            <td style={{ fontWeight: '600', color: (os.netProfit || 0) >= 0 ? '#059669' : '#ef4444' }}>
-                                                R$ {(os.netProfit || 0).toFixed(2)}
+                                        {(user?.role === 'PROPRIETARIO' || user?.role === 'FINANCEIRO') ? (
+                                            <>
+                                                <td style={{ textAlign: 'right', fontWeight: '500' }}>
+                                                    R$ {(os.totalValue || 0).toFixed(2)}
+                                                </td>
+                                                <td style={{ textAlign: 'right', fontWeight: '600', color: (os.netProfit || 0) >= 0 ? '#059669' : '#ef4444' }}>
+                                                    R$ {(os.netProfit || 0).toFixed(2)}
+                                                </td>
+                                            </>
+                                        ) : (
+                                            <td style={{ textAlign: 'right', fontWeight: '600', color: 'var(--primary-color)' }}>
+                                                R$ {(os.technicianPayment || 0).toFixed(2)}
                                             </td>
                                         )}
                                         <td>

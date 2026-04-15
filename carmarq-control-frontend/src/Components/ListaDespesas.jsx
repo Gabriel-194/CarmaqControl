@@ -7,7 +7,7 @@ import '../Styles/ListaDespesas.css';
 
 const API_URL = 'http://localhost:8080/api/service-orders';
 
-export default function ListaDespesas({ serviceOrderId, orderStatus, userRole, onUpdate }) {
+export default function ListaDespesas({ serviceOrderId, orderStatus, userRole, serviceType, manutencaoOrigin, onUpdate }) {
     const [despesas, setDespesas] = useState([]);
     const [totalValue, setTotalValue] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -19,7 +19,8 @@ export default function ListaDespesas({ serviceOrderId, orderStatus, userRole, o
 
     const [formData, setFormData] = useState({
         expenseType: 'DESLOCAMENTO_KM',
-        quantityKm: '',
+        quantity: '',
+        unitValue: '',
         value: '',
         description: ''
     });
@@ -27,9 +28,8 @@ export default function ListaDespesas({ serviceOrderId, orderStatus, userRole, o
     const isAdmin = userRole === 'PROPRIETARIO' || userRole === 'FINANCEIRO';
     const isLocked = orderStatus === 'PAGO' || orderStatus === 'CANCELADA';
     
-    // Novo: Proprietário e Financeiro podem editar se não estiver PAGO ou CANCELADA.
-    // Técnico só pode editar se estiver EM_ANDAMENTO.
-    const isEditable = isAdmin ? !isLocked : orderStatus === 'EM_ANDAMENTO';
+    // Novo: Tanto Proprietário quanto Técnico podem editar se não estiver PAGO ou CANCELADA.
+    const isEditable = !isLocked;
 
     const fetchDespesas = async () => {
         try {
@@ -56,7 +56,9 @@ export default function ListaDespesas({ serviceOrderId, orderStatus, userRole, o
         if (isLocked) return;
         
         let val = parseFloat(formData.value);
-        let qty = formData.expenseType === 'DESLOCAMENTO_KM' ? parseFloat(formData.quantityKm) : null;
+        let qty = (formData.expenseType === 'DESLOCAMENTO_KM' || formData.expenseType === 'PEDAGIO' || formData.expenseType === 'HOSPEDAGEM' || formData.expenseType === 'ALIMENTACAO') 
+            ? parseFloat(formData.quantity) 
+            : null;
 
         if (isNaN(val) || val <= 0) {
             toast('Por favor, informe um valor válido.', 'error');
@@ -77,7 +79,7 @@ export default function ListaDespesas({ serviceOrderId, orderStatus, userRole, o
         try {
             const payload = {
                 expenseType: formData.expenseType,
-                quantityKm: qty,
+                quantity: qty,
                 value: val,
                 description: formData.description
             };
@@ -103,7 +105,8 @@ export default function ListaDespesas({ serviceOrderId, orderStatus, userRole, o
     const resetForm = () => {
         setFormData({
             expenseType: 'DESLOCAMENTO_KM',
-            quantityKm: '',
+            quantity: '',
+            unitValue: '',
             value: '',
             description: ''
         });
@@ -114,7 +117,8 @@ export default function ListaDespesas({ serviceOrderId, orderStatus, userRole, o
     const handleEditClick = (d) => {
         setFormData({
             expenseType: d.expenseType,
-            quantityKm: d.quantityKm || '',
+            quantity: d.quantity || '',
+            unitValue: (d.quantity && d.quantity > 0) ? (d.value / d.quantity).toFixed(2) : d.value,
             value: d.value,
             description: d.description || ''
         });
@@ -164,27 +168,50 @@ export default function ListaDespesas({ serviceOrderId, orderStatus, userRole, o
                                 </select>
                             </div>
 
-                            {formData.expenseType === 'DESLOCAMENTO_KM' && (
+                            {/* Campo de Quantidade Dinâmico */}
+                            {(formData.expenseType === 'DESLOCAMENTO_KM' || formData.expenseType === 'PEDAGIO' || formData.expenseType === 'HOSPEDAGEM' || formData.expenseType === 'ALIMENTACAO') && (
                                 <div className="form-group" style={{ width: '120px' }}>
-                                    <label>Qtd. KM</label>
+                                    <label>
+                                        {formData.expenseType === 'DESLOCAMENTO_KM' ? 'Qtd. KM' : 
+                                         formData.expenseType === 'PEDAGIO' ? 'Qtd. Pedágios' : 'Dias'}
+                                    </label>
                                     <input 
                                         type="number" 
-                                        step="0.1"
+                                        step={formData.expenseType === 'DESLOCAMENTO_KM' ? "0.1" : "1"}
                                         className="form-input" 
-                                        placeholder="Ex: 50.5"
-                                        value={formData.quantityKm}
-                                        onChange={(e) => setFormData({
-                                            ...formData, 
-                                            quantityKm: e.target.value,
-                                            value: e.target.value ? (parseFloat(e.target.value) * 2.20).toFixed(2) : ''
-                                        })}
+                                        placeholder={formData.expenseType === 'DESLOCAMENTO_KM' ? "Ex: 50.5" : "Ex: 5"}
+                                        value={formData.quantity}
+                                        onChange={(e) => {
+                                            const qty = e.target.value;
+                                            if (formData.expenseType === 'DESLOCAMENTO_KM') {
+                                                const rate = serviceType === 'INSTALACAO' || (serviceType === 'MANUTENCAO' && manutencaoOrigin === 'VALENTIM') ? 2.20 : 2.50;
+                                                setFormData({
+                                                    ...formData, 
+                                                    quantity: qty,
+                                                    value: qty ? (parseFloat(qty) * rate).toFixed(2) : ''
+                                                });
+                                            } else {
+                                                const uv = parseFloat(formData.unitValue) || 0;
+                                                setFormData({ 
+                                                    ...formData, 
+                                                    quantity: qty,
+                                                    value: (qty && uv) ? (parseFloat(qty) * uv).toFixed(2) : formData.value
+                                                });
+                                            }
+                                        }}
                                     />
-                                    <span style={{ fontSize: '0.65rem', color: 'var(--primary-color)' }}>Taxa: R$ 2,20/KM</span>
+                                    {formData.expenseType === 'DESLOCAMENTO_KM' && (
+                                        <span style={{ fontSize: '0.65rem', color: 'var(--primary-color)' }}>
+                                            Taxa: R$ {(serviceType === 'INSTALACAO' || (serviceType === 'MANUTENCAO' && manutencaoOrigin === 'VALENTIM')) ? '2,20' : '2,50'}/KM
+                                        </span>
+                                    )}
                                 </div>
                             )}
 
                             <div className="form-group" style={{ width: '150px' }}>
-                                <label>Valor (R$)</label>
+                                <label>
+                                    {(formData.expenseType === 'HOSPEDAGEM' || formData.expenseType === 'ALIMENTACAO' || formData.expenseType === 'PEDAGIO') ? 'Valor Unit./Diária (R$)' : 'Valor Bruto (R$)'}
+                                </label>
                                 <input 
                                     type="number" 
                                     step="0.01"
@@ -192,11 +219,34 @@ export default function ListaDespesas({ serviceOrderId, orderStatus, userRole, o
                                     className="form-input" 
                                     style={formData.expenseType === 'DESLOCAMENTO_KM' ? { backgroundColor: '#f0fdf4', color: 'var(--primary-color)', fontWeight: 'bold' } : {}}
                                     placeholder="0.00"
-                                    value={formData.value}
-                                    onChange={(e) => setFormData({...formData, value: e.target.value})}
+                                    value={formData.expenseType === 'DESLOCAMENTO_KM' ? formData.value : formData.unitValue}
+                                    onChange={(e) => {
+                                        const uv = e.target.value;
+                                        if (formData.expenseType !== 'DESLOCAMENTO_KM') {
+                                            const qty = parseFloat(formData.quantity) || 1;
+                                            setFormData({
+                                                ...formData, 
+                                                unitValue: uv,
+                                                value: uv ? (parseFloat(uv) * qty).toFixed(2) : ''
+                                            });
+                                        }
+                                    }}
                                     required
                                 />
                             </div>
+                            
+                            {(formData.expenseType === 'HOSPEDAGEM' || formData.expenseType === 'ALIMENTACAO' || formData.expenseType === 'PEDAGIO') && (
+                                <div className="form-group" style={{ width: '150px' }}>
+                                    <label>Total Calculado</label>
+                                    <input 
+                                        type="number" 
+                                        className="form-input" 
+                                        style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed', fontWeight: 'bold' }}
+                                        value={formData.value}
+                                        disabled
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         <div className="form-group">
@@ -247,7 +297,7 @@ export default function ListaDespesas({ serviceOrderId, orderStatus, userRole, o
                     fontWeight: '500'
                 }}>
                     <Lock size={18} />
-                    <span>{isLocked ? `OS ${orderStatus} - Edição bloqueada` : 'Lançamento permitido apenas em Andamento'}</span>
+                    <span>{isLocked ? `OS ${orderStatus} - Edição bloqueada` : 'Edição permitida'}</span>
                 </div>
             )}
 
@@ -273,9 +323,12 @@ export default function ListaDespesas({ serviceOrderId, orderStatus, userRole, o
                                 <div className="item-info">
                                     <div className="item-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
                                         <strong style={{ fontSize: '0.95rem' }}>{d.expenseTypeLabel}</strong>
-                                        {d.quantityKm && (
+                                        {d.quantity && (
                                             <span style={{ fontSize: '0.75rem', backgroundColor: '#e2e8f0', padding: '0.1rem 0.4rem', borderRadius: '0.25rem' }}>
-                                                {d.quantityKm} km
+                                                {d.quantity} {
+                                                    d.expenseType === 'DESLOCAMENTO_KM' ? 'km' : 
+                                                    (d.expenseType === 'HOSPEDAGEM' || d.expenseType === 'ALIMENTACAO') ? 'dias' : 'un'
+                                                }
                                             </span>
                                         )}
                                     </div>

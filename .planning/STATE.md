@@ -21,6 +21,8 @@
 - [x] Milestone v1.2 Complete
 - [x] Phase 12 Execution (Hardening: BOLA & Mass Assignment)
 - [ ] Phase 13 added: Hardening: Infraestrutura, Concorrência e CSRF
+- [x] Phase 14 Execution (Correções de Regras de Negócio e Auditoria)
+- [x] Phase 15 Execution (Corrigir Erro na Exportação de PDF)
 
 ## Known Issues
-- All initial requirements for v1.0 were met and verified.
+- All critical business logic and PDF export regressions identified in Phase 14-15 have been resolved.

@@ -6,6 +6,8 @@ export const statusMap = {
     COM_PROBLEMA:    { label: 'Com Problema',     css: 'status-cancelada' },
     REQUER_INSPECAO: { label: 'Requer Inspeção',  css: 'status-inspecao' },
     PAGO:            { label: 'Pago',             css: 'status-concluido' },
+    REJEITADA:       { label: 'Rejeitada',        css: 'status-laranja' },
+    EM_REVISAO:      { label: 'Em Revisão',       css: 'status-laranja' },
 }
 
 export const serviceTypeLabels = {
@@ -29,7 +31,7 @@ export const paymentStatusMap = {
 }
 
 export const expenseTypeLabels = {
-    DESLOCAMENTO_KM: 'Deslocamento',
+    DESLOCAMENTO_KM: 'Deslocamento (ida e volta)',
     PEDAGIO:         'Pedágio',
     ALIMENTACAO:     'Alimentação',
     HOSPEDAGEM:      'Hospedagem',

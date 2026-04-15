@@ -4,7 +4,7 @@ import Sidebar from '../Components/Sidebar'
 import ClientModal from '../Components/Clients/ClientModal'
 import { useAuth } from '../contexts/AuthContext'
 import { toast } from '../Components/ui/Toaster'
-import { Plus, Save, Loader2, UserCog, Zap, DollarSign, Clock, MapPin, Wrench, Lightbulb, Package, FileText } from 'lucide-react'
+import { Plus, Save, Loader2, UserCog, Zap, DollarSign, Clock, MapPin, Wrench, Lightbulb, Package, FileText, Cog } from 'lucide-react'
 import axios from 'axios'
 import '../Styles/Form.css'
 import '../Styles/NovaOS.css'
@@ -12,13 +12,37 @@ import '../Styles/NovaOS.css'
 const API_BASE = 'http://localhost:8080/api'
 
 const typeLabels = {
-    LASER: 'Laser',
+    LASER_CHAPA: 'Laser Chapa',
+    LASER_TUBO: 'Laser Tubo',
     DOBRADEIRA: 'Dobradeira',
     GUILHOTINA: 'Guilhotina',
     CURVADORA_TUBO: 'Curvadora de Tubo',
     METALEIRA: 'Metaleira',
     CALANDRA: 'Calandra',
     GRAVADORA_LASER: 'Gravadora a Laser',
+}
+
+const fieldsByType = {
+    LASER_CHAPA: ['laserSize', 'laserKind', 'laserPower'],
+    LASER_TUBO: ['laserSize', 'laserKind', 'laserPower'],
+    DOBRADEIRA: ['machineSize', 'tonnage', 'command'],
+    GUILHOTINA: ['machineSize', 'tonnage', 'command'],
+    CURVADORA_TUBO: ['machineSize', 'command', 'force', 'diameter'],
+    METALEIRA: ['machineSize', 'tonnage'],
+    CALANDRA: ['machineSize', 'command', 'force', 'diameter', 'rollerCount'],
+    GRAVADORA_LASER: ['machineSize', 'laserPower'],
+}
+
+const fieldLabels = {
+    laserSize: 'Tamanho da Mesa',
+    laserKind: 'Tipo (Fechada / Aberta)',
+    laserPower: 'Potência (W)',
+    machineSize: 'Tamanho',
+    tonnage: 'Tonelagem',
+    command: 'Comando',
+    force: 'Força',
+    diameter: 'Diâmetro máximo (mm)',
+    rollerCount: 'Quantidade de Rolos',
 }
 
 // Página de criação de OS com Automação Inteligente
@@ -37,6 +61,7 @@ export default function NovaOS() {
     const [previewData, setPreviewData] = useState(null)
     const [isClientModalOpen, setIsClientModalOpen] = useState(false)
     const [clientSearchTerm, setClientSearchTerm] = useState('')
+    const [selectedMachine, setSelectedMachine] = useState(null)
 
     const [formData, setFormData] = useState({
         clienteId: '',
@@ -48,7 +73,10 @@ export default function NovaOS() {
         tipoServico: '',
         manutencaoOrigin: '',
         valorServico: '',
-        serviceDate: ''
+        serviceDate: '',
+        foodValue: '',
+        tollValue: '',
+        accommodationValue: ''
     })
 
     const handleClientSearch = (value) => {
@@ -58,6 +86,23 @@ export default function NovaOS() {
     }
 
     const clienteSelecionado = listaClientes.find(c => c.id === parseInt(formData.clienteId))
+
+    const [machineSearchTerm, setMachineSearchTerm] = useState('')
+
+    const handleMachineSearch = (value) => {
+        setMachineSearchTerm(value)
+        const selected = listaMaquinas.find(m => `${typeLabels[m.machineType] || m.machineType} — ${m.model}` === value)
+        if (selected) {
+            setFormData(prev => ({ ...prev, maquinaId: selected.id }))
+            setSelectedMachine(selected)
+            handleMachineChange(selected.id)
+        } else {
+            setFormData(prev => ({ ...prev, maquinaId: '' }))
+            setSelectedMachine(null)
+            // Clear suggestion if invalid
+            setSuggestions(null)
+        }
+    }
 
 
     const carregarClientes = async () => {
@@ -165,7 +210,10 @@ export default function NovaOS() {
             observations: formData.observacoes,
             serviceType: formData.tipoServico,
             manutencaoOrigin: formData.tipoServico === 'MANUTENCAO' ? formData.manutencaoOrigin : null,
-            serviceValue: formData.valorServico ? parseFloat(formData.valorServico) : null
+            serviceValue: formData.valorServico ? parseFloat(formData.valorServico) : null,
+            foodValue: formData.foodValue ? parseFloat(formData.foodValue) : null,
+            tollValue: formData.tollValue ? parseFloat(formData.tollValue) : null,
+            accommodationValue: formData.accommodationValue ? parseFloat(formData.accommodationValue) : null
         }
 
         try {
@@ -262,21 +310,58 @@ export default function NovaOS() {
                                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     <Zap size={16} color="var(--primary-color)" /> Máquina (aciona automação) *
                                 </label>
-                                <select
+                                <input
+                                    list="machines-datalist"
                                     className={`form-input ${formErrors.machineId ? 'input-error' : ''}`}
-                                    style={formData.maquinaId ? { borderColor: 'var(--primary-color)', backgroundColor: '#f0fdf4' } : {}}
-                                    value={formData.maquinaId}
-                                    onChange={e => handleMachineChange(e.target.value)}
-                                >
-                                    <option value="">Selecione a máquina...</option>
+                                    placeholder="Digite para pesquisar a máquina..."
+                                    value={machineSearchTerm}
+                                    onChange={e => handleMachineSearch(e.target.value)}
+                                    autoComplete="off"
+                                />
+                                <datalist id="machines-datalist">
                                     {listaMaquinas.map(m => (
-                                        <option key={m.id} value={m.id}>
-                                            {typeLabels[m.machineType] || m.machineType} — {m.name} ({m.model})
-                                        </option>
+                                        <option key={m.id} value={`${typeLabels[m.machineType] || m.machineType} — ${m.model}`} />
                                     ))}
-                                </select>
+                                </datalist>
                                 {formErrors.machineId && <span className="error-message">{formErrors.machineId}</span>}
                             </div>
+
+                            {/* Preview de Especificações Técnicas da Máquina */}
+                            {selectedMachine && (
+                                <div className="machine-specs-preview" style={{ 
+                                    backgroundColor: '#f9fafb', 
+                                    border: '1px solid #e5e7eb', 
+                                    borderRadius: '8px', 
+                                    padding: '1rem', 
+                                    marginTop: '0.5rem',
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                                    gap: '1rem'
+                                }}>
+                                    <div style={{ gridColumn: '1 / -1', borderBottom: '1px solid #eee', paddingBottom: '0.5rem', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <Cog size={16} color="var(--primary-color)" />
+                                        <span style={{ fontWeight: '700', fontSize: '0.85rem', color: 'var(--primary-color)', textTransform: 'uppercase' }}>Especificações Técnicas</span>
+                                    </div>
+                                    
+                                    {fieldsByType[selectedMachine.machineType]?.map(field => {
+                                        const value = selectedMachine[field];
+                                        if (value === null || value === undefined || value === '') return null;
+                                        
+                                        return (
+                                            <div key={field} style={{ display: 'flex', flexDirection: 'column' }}>
+                                                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '600' }}>{fieldLabels[field]}</span>
+                                                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#374151' }}>
+                                                    {field === 'laserPower' ? `${value}W` : 
+                                                     field === 'diameter' ? `${value}mm` : 
+                                                     field === 'tonnage' ? `${value}T` : 
+                                                     field === 'laserKind' ? (value === 'FECHADA' ? 'Fechada' : 'Aberta') :
+                                                     value}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
 
 
 
@@ -394,17 +479,18 @@ export default function NovaOS() {
                                 {formErrors.serviceValue && <span className="error-message">{formErrors.serviceValue}</span>}
                             </div>
 
-                            {/* Descrição do Problema */}
-                            <div className="form-group">
-                                <label>Descrição do Problema</label>
-                                <textarea
-                                    className="form-input"
-                                    rows="3"
-                                    placeholder="Descreva o problema relatado pelo cliente..."
-                                    value={formData.descricaoProblema}
-                                    onChange={e => setFormData({ ...formData, descricaoProblema: e.target.value })}
-                                ></textarea>
-                            </div>
+                            {formData.tipoServico !== 'INSTALACAO' && (
+                                <div className="form-group">
+                                    <label>Descrição do Problema</label>
+                                    <textarea
+                                        className="form-input"
+                                        rows="3"
+                                        placeholder="Descreva o problema relatado pelo cliente..."
+                                        value={formData.descricaoProblema}
+                                        onChange={e => setFormData({ ...formData, descricaoProblema: e.target.value })}
+                                    ></textarea>
+                                </div>
+                            )}
 
                             {/* Observações */}
                             <div className="form-group">

@@ -7,7 +7,8 @@ import '../Styles/TabelaTempos.css'
 const API_URL = 'http://localhost:8080/api/service-orders'
 
 // Componente de tempos integrado com API real
-export default function TabelaTempos({ serviceOrderId, userRole, osTipo, onUpdate }) {
+export default function TabelaTempos({ serviceOrderId, userRole, osTipo, orderStatus, onUpdate }) {
+    const isLocked = orderStatus === 'PAGO' || orderStatus === 'CANCELADA';
     const [registros, setRegistros] = useState([])
     const [loading, setLoading] = useState(true)
     const [timerType, setTimerType] = useState('TRABALHO')
@@ -46,8 +47,8 @@ export default function TabelaTempos({ serviceOrderId, userRole, osTipo, onUpdat
         setManualData({
             type: reg.type,
             registeredDate: reg.registeredDate || new Date().toISOString().split('T')[0],
-            startTime: reg.startTime ? reg.startTime.substring(0, 16) : '',
-            endTime: reg.endTime ? reg.endTime.substring(0, 16) : '',
+            startTime: reg.startTime ? reg.startTime.substring(11, 16) : '',
+            endTime: reg.endTime ? reg.endTime.substring(11, 16) : '',
             description: reg.description || ''
         })
         setEditingId(reg.id)
@@ -79,8 +80,8 @@ export default function TabelaTempos({ serviceOrderId, userRole, osTipo, onUpdat
             const payload = {
                 type: manualData.type,
                 registeredDate: manualData.registeredDate,
-                startTime: manualData.startTime,
-                endTime: manualData.endTime,
+                startTime: `${manualData.registeredDate}T${manualData.startTime}:00`,
+                endTime: `${manualData.registeredDate}T${manualData.endTime}:00`,
                 description: manualData.description
             }
 
@@ -106,20 +107,18 @@ export default function TabelaTempos({ serviceOrderId, userRole, osTipo, onUpdat
     // Mapeamento de tipos para label
     const typeLabels = {
         'SAIDA_SEDE': 'Saída da Sede',
+        'SAIDA_HOTEL': 'Saída do Hotel',
         'CHEGADA_CLIENTE': 'Chegada ao Cliente',
         'TRABALHO': 'Trabalho',
+        'RETORNO_HOTEL': 'Retorno ao Hotel',
         'RETORNO_SEDE': 'Retorno à Sede'
     }
 
     if (loading) return <div style={{ textAlign: 'center', padding: '1rem' }}><Loader2 className="animate-spin" size={20} /></div>
 
-    if (osTipo === 'INSTALACAO') {
-        return (
-            <div className="times-container" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                <p>Nesta Ordem de Serviço de <strong>Instalação</strong>, o valor da Mão de Obra e pagamento ao técnico possui formatação fixa.</p>
-                <p>A tabela de controle de horas de trabalho fica bloqueada.</p>
-            </div>
-        )
+    if (osTipo === 'INSTALACAO' && userRole === 'TECNICO' && !registros.length && !showManual) {
+        // Mostramos um aviso inicial apenas se não houver registros, mas permitimos o uso
+        // para registrar deslocamento.
     }
 
     const isOrderLocked = registros.some(r => r.orderStatus === 'PAGO' || r.orderStatus === 'CANCELADA') 
@@ -132,21 +131,40 @@ export default function TabelaTempos({ serviceOrderId, userRole, osTipo, onUpdat
         <div className="times-container">
             {userRole === 'TECNICO' && (
                 <div className="timer-control" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                    <button 
-                        className="btn-primary" 
-                        onClick={() => {
-                            setIsEditing(false)
-                            setEditingId(null)
-                            setManualData({ type: 'TRABALHO', registeredDate: new Date().toISOString().split('T')[0], startTime: '', endTime: '', description: '' })
-                            setShowManual(!showManual)
-                        }}
-                    >
-                        <Plus size={16} /> {showManual ? 'Cancelar Lançamento' : 'Novo Lançamento de Tempo'}
-                    </button>
-                    {!showManual && (
-                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>
-                            O cronômetro automático foi removido. Utilize o lançamento manual para registrar suas horas.
-                        </p>
+                    {!isLocked ? (
+                        <>
+                            <button 
+                                className="btn-primary" 
+                                onClick={() => {
+                                    setIsEditing(false)
+                                    setEditingId(null)
+                                    setManualData({ type: 'TRABALHO', registeredDate: new Date().toISOString().split('T')[0], startTime: '', endTime: '', description: '' })
+                                    setShowManual(!showManual)
+                                }}
+                            >
+                                <Plus size={16} /> {showManual ? 'Cancelar Lançamento' : 'Novo Lançamento de Tempo'}
+                            </button>
+                            {!showManual && (
+                                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>
+                                    O cronômetro automático foi removido. Utilize o lançamento manual para registrar suas horas.
+                                </p>
+                            )}
+                        </>
+                    ) : (
+                        <div className="status-warning" style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '0.5rem', 
+                            padding: '0.75rem 1rem',
+                            backgroundColor: '#fee2e2', 
+                            color: '#991b1b', 
+                            borderRadius: '6px', 
+                            fontSize: '0.9rem',
+                            fontWeight: '500'
+                        }}>
+                            <Plus size={18} opacity={0.5} />
+                            <span>OS {orderStatus} - Lançamento de horas bloqueado</span>
+                        </div>
                     )}
                 </div>
             )}
@@ -162,7 +180,9 @@ export default function TabelaTempos({ serviceOrderId, userRole, osTipo, onUpdat
                             <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Tipo</label>
                             <select className="form-input" value={manualData.type} onChange={e => setManualData({ ...manualData, type: e.target.value })}>
                                 <option value="SAIDA_SEDE">Saída da Sede</option>
+                                <option value="SAIDA_HOTEL">Saída do Hotel</option>
                                 <option value="TRABALHO">Trabalho</option>
+                                <option value="RETORNO_HOTEL">Retorno ao Hotel</option>
                                 <option value="RETORNO_SEDE">Retorno à Sede</option>
                             </select>
                         </div>
@@ -176,11 +196,11 @@ export default function TabelaTempos({ serviceOrderId, userRole, osTipo, onUpdat
                         </div>
                         <div>
                             <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Início</label>
-                            <input type="datetime-local" className="form-input" value={manualData.startTime} onChange={e => setManualData({ ...manualData, startTime: e.target.value })} />
+                            <input type="time" className="form-input" value={manualData.startTime} onChange={e => setManualData({ ...manualData, startTime: e.target.value })} />
                         </div>
                         <div>
                             <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Fim</label>
-                            <input type="datetime-local" className="form-input" value={manualData.endTime} onChange={e => setManualData({ ...manualData, endTime: e.target.value })} />
+                            <input type="time" className="form-input" value={manualData.endTime} onChange={e => setManualData({ ...manualData, endTime: e.target.value })} />
                         </div>
                     </div>
                     <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>

@@ -152,3 +152,48 @@
     font-size: 1.1rem;
     color: var(--text-color);
 }
+
+.finance-section-title {
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.025em;
+    border-bottom: 1px solid #f3f4f6;
+    padding-bottom: 0.25rem;
+}
+
+.reimbursement-container {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.reimbursement-container label {
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: var(--text-color);
+}
+
+.reimbursement-input-group {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.reimbursement-input-group input {
+    flex: 3;
+    margin: 0;
+    padding: 0.5rem;
+}
+
+.reimbursement-input-group button {
+    flex: 1;
+    min-width: 100px;
+}
+
+.reimbursement-container .help-text {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    font-style: italic;
+}

@@ -87,6 +87,7 @@ body {
 .status-cancelada { background-color: #fee2e2; color: #dc2626; }
 .status-inspecao { background-color: #fef3c7; color: #ea580c; }
 .status-requer-inspecao { background-color: #fef3c7; color: #ea580c; }
+.status-laranja { background-color: #fff7ed; color: #ea580c; border: 1px solid #ffedd5; }
 
 /* Utilitários globais */
 .animate-spin {

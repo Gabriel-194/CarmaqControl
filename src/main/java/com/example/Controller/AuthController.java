@@ -71,7 +71,13 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(HttpServletResponse response) {
-        authService.logout(response);
+        // Correção: Garante que o cookie seja limpo explicitamente na resposta
+        jakarta.servlet.http.Cookie cookie = new jakarta.servlet.http.Cookie("accessToken", null);
+        cookie.setHttpOnly(true);
+        cookie.setPath("/");
+        cookie.setMaxAge(0);
+        response.addCookie(cookie);
+        
         return ResponseEntity.ok().build();
     }
 

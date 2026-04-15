@@ -61,4 +61,5 @@ public class ServiceOrderRequestDTO {
     // Novos campos de custo (Fase 6)
     private Double travelValue;
     private Double displacementValue;
+    private Double reimbursementValue;
 }

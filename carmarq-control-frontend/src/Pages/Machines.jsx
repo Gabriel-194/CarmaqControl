@@ -1,22 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import Sidebar from '../Components/Sidebar'
 import MachineModal from '../Components/Machines/MachineModal'
+import MachineTooltip from '../Components/Machines/MachineTooltip'
+import { typeLabels } from '../Constants/MachineConstants'
 import { toast } from '../Components/ui/Toaster'
 import { Search, Plus, Edit2, Trash2, RotateCcw, Loader2, Cog } from 'lucide-react'
 import axios from 'axios'
 import '../Styles/Machines.css'
 
 const API_URL = 'http://localhost:8080/api/machines'
-
-const typeLabels = {
-    LASER: 'Laser',
-    DOBRADEIRA: 'Dobradeira',
-    GUILHOTINA: 'Guilhotina',
-    CURVADORA_TUBO: 'Curvadora de Tubo',
-    METALEIRA: 'Metaleira',
-    CALANDRA: 'Calandra',
-    GRAVADORA_LASER: 'Gravadora a Laser',
-}
 
 // Página CRUD da Biblioteca de Máquinas
 export default function Machines() {
@@ -27,6 +19,11 @@ export default function Machines() {
     const [editingMachine, setEditingMachine] = useState(null)
     const [showInactive, setShowInactive] = useState(false)
     const [modalErrors, setModalErrors] = useState({})
+    
+    // Tooltip state
+    const [hoveredMachine, setHoveredMachine] = useState(null)
+    const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
+    const [hoverTimeout, setHoverTimeout] = useState(null)
 
     const fetchMachines = async () => {
         try {
@@ -102,13 +99,30 @@ export default function Machines() {
 
     const filtered = machines.filter(m => {
         const model = m.model?.toLowerCase() || ''
-        const name = m.name?.toLowerCase() || ''
         const type = m.machineType?.toLowerCase() || ''
         const serial = m.serialNumber?.toLowerCase() || ''
         const search = searchTerm.toLowerCase()
         
-        return model.includes(search) || name.includes(search) || type.includes(search) || serial.includes(search)
+        return model.includes(search) || type.includes(search) || serial.includes(search)
     })
+
+    // Tooltip handlers
+    const handleMouseEnter = (machine) => {
+        const timeout = setTimeout(() => {
+            setHoveredMachine(machine)
+        }, 400) // 400ms delay as requested
+        setHoverTimeout(timeout)
+    }
+
+    const handleMouseLeave = () => {
+        if (hoverTimeout) clearTimeout(hoverTimeout)
+        setHoveredMachine(null)
+        setHoverTimeout(null)
+    }
+
+    const handleMouseMove = (e) => {
+        setMousePos({ x: e.clientX, y: e.clientY })
+    }
 
     return (
         <div className="dashboard-layout">
@@ -160,7 +174,6 @@ export default function Machines() {
                             <thead>
                                 <tr>
                                     <th>Tipo</th>
-                                    <th>Nome</th>
                                      <th>Modelo</th>
                                      <th>Núm. Série</th>
                                     <th>Instalação</th>
@@ -170,9 +183,13 @@ export default function Machines() {
                             </thead>
                             <tbody>
                                 {filtered.map(m => (
-                                    <tr key={m.id}>
+                                    <tr 
+                                        key={m.id}
+                                        onMouseEnter={() => handleMouseEnter(m)}
+                                        onMouseLeave={handleMouseLeave}
+                                        onMouseMove={handleMouseMove}
+                                    >
                                         <td className="font-bold">{typeLabels[m.machineType] || m.machineType}</td>
-                                        <td>{m.name}</td>
                                          <td>{m.model}</td>
                                          <td className="text-muted">{m.serialNumber}</td>
                                         <td className="font-bold">R$ {(m.installationPrice || 0).toFixed(2)}</td>
@@ -226,6 +243,10 @@ export default function Machines() {
                         onSave={handleSave}
                         errors={modalErrors}
                     />
+                )}
+
+                {hoveredMachine && (
+                    <MachineTooltip machine={hoveredMachine} position={mousePos} />
                 )}
             </main>
         </div>

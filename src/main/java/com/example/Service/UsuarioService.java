@@ -82,6 +82,8 @@ public class UsuarioService implements UserDetailsService {
         // Atualiza a senha somente se foi enviada (não blank)
         if (dto.getSenha() != null && !dto.getSenha().isBlank()) {
             usuario.setSenha(passwordEncoder.encode(dto.getSenha()));
+            usuario.setFailedLoginAttempts(0);
+            usuario.setAccountLockedUntil(null);
         }
 
         Usuario updated = usuarioRepository.save(usuario);

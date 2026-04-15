@@ -57,17 +57,11 @@ public class ServiceExpenseService {
 
         // Técnicos não podem adicionar despesas após CONCLUIDA.
         // Proprietário/Financeiro só são bloqueados em PAGO ou CANCELADA.
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Usuario currentUser = (Usuario) auth.getPrincipal();
-        String role = currentUser.getRole();
 
         if ("PAGO".equals(order.getStatus()) || "CANCELADA".equals(order.getStatus())) {
             throw new RuntimeException("Não é possível adicionar despesas em uma OS com status " + order.getStatus());
         }
         
-        if ("CONCLUIDA".equals(order.getStatus()) && "TECNICO".equals(role)) {
-            throw new RuntimeException("Técnicos não podem adicionar despesas após a conclusão da OS.");
-        }
 
         ServiceExpense expense = ServiceExpense.builder()
                 .serviceOrder(order)
@@ -75,13 +69,15 @@ public class ServiceExpenseService {
                 .build();
 
         if (dto.getExpenseType() == ExpenseTypeEnum.DESLOCAMENTO_KM) {
-            if (dto.getQuantityKm() == null) {
+            if (dto.getQuantity() == null) {
                 throw new RuntimeException("Quantidade de Km é obrigatória para despesas de deslocamento");
             }
-            expense.setQuantityKm(dto.getQuantityKm());
-            expense.setValue(dto.getQuantityKm() * 2.20);
+            expense.setQuantity(dto.getQuantity());
+            Double rate = getDisplacementRate(order);
+            expense.setValue(dto.getQuantity() * rate);
             expense.setDescription(dto.getDescription());
         } else {
+            expense.setQuantity(dto.getQuantity()); // Salva dias/qtd se informado
             if (dto.getValue() == null) {
                 throw new RuntimeException("Valor é obrigatório para este tipo de despesa");
             }
@@ -105,17 +101,10 @@ public class ServiceExpenseService {
 
         validateOwnership(order);
 
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Usuario currentUser = (Usuario) auth.getPrincipal();
-        String role = currentUser.getRole();
-
         if ("PAGO".equals(order.getStatus()) || "CANCELADA".equals(order.getStatus())) {
             throw new RuntimeException("Não é possível remover despesas em uma OS com status " + order.getStatus());
         }
 
-        if ("CONCLUIDA".equals(order.getStatus()) && "TECNICO".equals(role)) {
-            throw new RuntimeException("Técnicos não podem remover despesas após a conclusão da OS.");
-        }
 
         ServiceExpense expense = serviceExpenseRepository.findById(expenseId)
                 .orElseThrow(() -> new RuntimeException("Despesa não encontrada"));
@@ -135,17 +124,10 @@ public class ServiceExpenseService {
 
         validateOwnership(order);
 
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Usuario currentUser = (Usuario) auth.getPrincipal();
-        String role = currentUser.getRole();
-
         if ("PAGO".equals(order.getStatus()) || "CANCELADA".equals(order.getStatus())) {
             throw new RuntimeException("Não é possível editar despesas em uma OS com status " + order.getStatus());
         }
 
-        if ("CONCLUIDA".equals(order.getStatus()) && "TECNICO".equals(role)) {
-            throw new RuntimeException("Técnicos não podem editar despesas após a conclusão da OS.");
-        }
 
         ServiceExpense expense = serviceExpenseRepository.findById(expenseId)
                 .orElseThrow(() -> new RuntimeException("Despesa não encontrada"));
@@ -156,12 +138,14 @@ public class ServiceExpenseService {
 
         expense.setExpenseType(dto.getExpenseType());
         if (dto.getExpenseType() == ExpenseTypeEnum.DESLOCAMENTO_KM) {
-            if (dto.getQuantityKm() == null) {
+            if (dto.getQuantity() == null) {
                 throw new RuntimeException("Quantidade de Km é obrigatória para despesas de deslocamento");
             }
-            expense.setQuantityKm(dto.getQuantityKm());
-            expense.setValue(dto.getQuantityKm() * 2.20);
+            expense.setQuantity(dto.getQuantity());
+            Double rate = getDisplacementRate(order);
+            expense.setValue(dto.getQuantity() * rate);
         } else {
+            expense.setQuantity(dto.getQuantity()); // Atualiza dias/qtd se informado
             if (dto.getValue() == null) {
                 throw new RuntimeException("Valor é obrigatório para este tipo de despesa");
             }
@@ -169,7 +153,6 @@ public class ServiceExpenseService {
                 throw new RuntimeException("Descrição é obrigatória para despesas do tipo OUTRO");
             }
             expense.setValue(dto.getValue());
-            expense.setQuantityKm(null);
         }
         expense.setDescription(dto.getDescription());
 
@@ -177,6 +160,17 @@ public class ServiceExpenseService {
         serviceOrderService.refreshExpensesValue(order);
 
         return mapToDTO(expense);
+    }
+
+    private Double getDisplacementRate(ServiceOrder order) {
+        if ("INSTALACAO".equals(order.getServiceType())) {
+            return 2.20;
+        }
+        if ("MANUTENCAO".equals(order.getServiceType()) && "VALENTIM".equals(order.getManutencaoOrigin())) {
+            return 2.20;
+        }
+        // Manutenção comum
+        return 2.50;
     }
 
     private void validateOwnership(ServiceOrder order) {
@@ -193,7 +187,7 @@ public class ServiceExpenseService {
     private ServiceExpenseResponseDTO mapToDTO(ServiceExpense expense) {
         String label;
         switch (expense.getExpenseType()) {
-            case DESLOCAMENTO_KM: label = "Deslocamento"; break;
+            case DESLOCAMENTO_KM: label = "Deslocamento (ida e volta)"; break;
             case PEDAGIO: label = "Pedágio"; break;
             case ALIMENTACAO: label = "Alimentação"; break;
             case HOSPEDAGEM: label = "Hospedagem"; break;
@@ -211,7 +205,7 @@ public class ServiceExpenseService {
                 .id(expense.getId())
                 .serviceOrderId(expense.getServiceOrder().getId())
                 .expenseType(expense.getExpenseType().name())
-                .quantityKm(expense.getQuantityKm())
+                .quantity(expense.getQuantity())
                 .value(expense.getValue())
                 .description(expense.getDescription())
                 .expenseTypeLabel(label)

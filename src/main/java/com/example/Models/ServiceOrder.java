@@ -27,6 +27,10 @@ public class ServiceOrder {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // Código customizado para exibição (AAAAMMDDXX)
+    @Column(unique = true, name = "os_code", length = 20)
+    private String osCode;
+
     // Relacionamento com o cliente
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_id", nullable = false)
@@ -107,7 +111,9 @@ public class ServiceOrder {
     @Column(name = "displacement_value")
     private Double displacementValue = 0.0;
 
-
+    @Builder.Default
+    @Column(name = "reimbursement_value")
+    private Double reimbursementValue = 0.0;
 
     // Valor que será pago/transferido ao técnico (calculado automaticamente: 10% de serviceValue + expensesValue)
     // O total faturado (totalValue) também é calculado dinamicamente: serviceValue + expensesValue + partsValue

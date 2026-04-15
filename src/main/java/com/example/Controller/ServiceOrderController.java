@@ -143,6 +143,23 @@ public class ServiceOrderController {
     }
 
 
+    @PutMapping("/{id}/reimbursement")
+    @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO', 'TECNICO')")
+    public ResponseEntity<ServiceOrderResponseDTO> updateReimbursement(
+            @PathVariable(name = "id") Long id,
+            @RequestBody Map<String, Double> body) {
+        return ResponseEntity.ok(serviceOrderService.updateReimbursement(id, body.get("reimbursementValue")));
+    }
+
+    // ── Liberar OS em inspeção (Proprietário) ────────────────────────────────
+    @PutMapping("/{id}/release-inspection")
+    @PreAuthorize("hasAuthority('PROPRIETARIO')")
+    public ResponseEntity<ServiceOrderResponseDTO> releaseInspection(
+            @PathVariable(name = "id") Long id) {
+        return ResponseEntity.ok(serviceOrderService.releaseInspection(id));
+    }
+
+
     @GetMapping("/{id}/report")
     @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'FINANCEIRO', 'TECNICO')")
     public ResponseEntity<byte[]> downloadReport(@PathVariable(name = "id") Long id) {
@@ -169,12 +186,13 @@ public class ServiceOrderController {
                             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                     .body(xlsx);
         } else {
-            byte[] pdf = reportService.generateMaintenancePdf(order, currentUser.getRole());
-            String filename = "OS_" + id + "_Manutencao.pdf";
+            byte[] xlsx = reportService.generateMaintenanceXlsx(order, currentUser.getRole());
+            String filename = "OS_" + id + "_Manutencao.xlsx";
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-                    .contentType(MediaType.APPLICATION_PDF)
-                    .body(pdf);
+                    .contentType(MediaType.parseMediaType(
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .body(xlsx);
         }
     }
 

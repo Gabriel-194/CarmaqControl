@@ -4,25 +4,6 @@ import com.example.Models.*;
 import com.example.Repository.ServiceExpenseRepository;
 import com.example.Repository.ServicePartRepository;
 import com.example.Repository.TimeTrackingRepository;
-import com.itextpdf.io.font.constants.StandardFonts;
-import com.itextpdf.io.image.ImageDataFactory;
-import com.itextpdf.kernel.colors.ColorConstants;
-import com.itextpdf.kernel.colors.DeviceRgb;
-import com.itextpdf.kernel.font.PdfFont;
-import com.itextpdf.kernel.font.PdfFontFactory;
-import com.itextpdf.kernel.geom.PageSize;
-import com.itextpdf.kernel.pdf.PdfDocument;
-import com.itextpdf.kernel.pdf.PdfWriter;
-import com.itextpdf.layout.Document;
-import com.itextpdf.layout.borders.Border;
-import com.itextpdf.layout.borders.SolidBorder;
-import com.itextpdf.layout.element.*;
-import com.itextpdf.layout.element.Cell;   
-import com.itextpdf.layout.element.Table;  
-import com.itextpdf.layout.properties.TextAlignment;
-import com.itextpdf.layout.properties.UnitValue;
-import com.itextpdf.layout.properties.VerticalAlignment;
-import com.itextpdf.kernel.pdf.canvas.draw.SolidLine;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.Resource;
@@ -52,17 +33,13 @@ public class ReportService {
     private final ServicePartRepository     servicePartRepository;
     private final ServiceExpenseRepository  serviceExpenseRepository;
     private final TimeTrackingRepository    timeTrackingRepository;
-    private final ServiceOrderService       serviceOrderService;
     private final ResourceLoader           resourceLoader;
 
     // ─── Constantes visuais ─────────────────────────────────────────────────────
-    private static final DeviceRgb GREEN_DARK   = new DeviceRgb(0,  176,  80);   // #00B050 – fundo banner
-    private static final DeviceRgb GREEN_LIGHT  = new DeviceRgb(187, 251, 189);  // #BBFBBD – linhas alt.
-    private static final DateTimeFormatter PTBR  = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-
     // Cores Apache POI (XSSF)
     private static final byte[] XLS_GREEN_DARK  = new byte[]{(byte)0x00, (byte)0xB0, (byte)0x50};
     private static final byte[] XLS_GREEN_LIGHT = new byte[]{(byte)0xBB, (byte)0xFB, (byte)0xBD};
+    private static final DateTimeFormatter PTBR  = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     // ═══════════════════════════════════════════════════════════════════════════
     // 1. PDF – MANUTENÇÃO
@@ -72,174 +49,329 @@ public class ReportService {
      * Gera o PDF de Ordem de Serviço de Manutenção conforme o layout
      * do modelo manutenção.pdf (OS em Garantia / Manutenção – CARMAQ SERVICE).
      */
-    public byte[] generateMaintenancePdf(ServiceOrder order, String userRole) {
+    public byte[] generateMaintenanceXlsx(ServiceOrder order, String userRole) {
+        try (XSSFWorkbook wb = new XSSFWorkbook();
+             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            XSSFSheet ws = wb.createSheet("Manutenção");
 
-        try (PdfWriter writer = new PdfWriter(baos);
-             PdfDocument pdf   = new PdfDocument(writer);
-             Document document = new Document(pdf, PageSize.A4)) {
+            // ── Inserir Logo ──────────────────────────────────────────────────
+            addLogoToExcel(wb, ws);
 
-            document.setMargins(28, 28, 28, 28);
-
-            PdfFont bold   = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
-            PdfFont normal = PdfFontFactory.createFont(StandardFonts.HELVETICA);
-
-            // ── CABEÇALHO (Logo à esquerda, Dados à direita) ────────────────
-            Table header = new Table(UnitValue.createPercentArray(new float[]{30, 70}))
-                    .useAllAvailableWidth().setBorder(Border.NO_BORDER);
-
-            Cell logoCell = new Cell().setBorder(Border.NO_BORDER).setVerticalAlignment(VerticalAlignment.MIDDLE);
-            try {
-                // Tenta carregar o logo via ClassPathResource para o PDF também
-                org.springframework.core.io.ClassPathResource imgFile = new org.springframework.core.io.ClassPathResource("static/logo-carmaq.png");
-                byte[] logoBytes = imgFile.getInputStream().readAllBytes();
-                Image logo = new Image(ImageDataFactory.create(logoBytes)).setWidth(120);
-                logoCell.add(logo);
-            } catch (Exception e) {
-                logoCell.add(new Paragraph("CARMAQ").setFont(bold).setFontSize(16).setFontColor(GREEN_DARK));
+            // ── Larguras das colunas (A-H) ─────────────────────────────────────
+            double[] colWidths = {4.88, 6.13, 6.88, 11.0, 18.0, 34.38, 14.38, 23.13};
+            for (int i = 0; i < colWidths.length; i++) {
+                ws.setColumnWidth(i, (int)(colWidths[i] * 256));
             }
 
-            Cell infoCell = new Cell().setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.RIGHT);
-            infoCell.add(new Paragraph("CARMAQ SERVICE").setFont(bold).setFontSize(12).setMarginBottom(-2));
-            infoCell.add(new Paragraph("CNPJ: 60.526.327/0001-23").setFont(normal).setFontSize(9).setMarginBottom(-2));
-            infoCell.add(new Paragraph("Av. Das Araucárias, 4255 | Araucária - PR").setFont(normal).setFontSize(9).setMarginBottom(-2));
-            infoCell.add(new Paragraph("Fone: (41) 3346-1430 | (41) 99663-1349").setFont(normal).setFontSize(9).setMarginBottom(-2));
-            infoCell.add(new Paragraph("service@carmaq.ind.br").setFont(normal).setFontSize(9));
+            // ── Estilos ────────────────────────────────────────────────────────
+            CellStyle greenDarkBold   = xlsBannerStyle(wb, XLS_GREEN_DARK,  true,  16, HorizontalAlignment.CENTER);
+            CellStyle greenDarkRight  = xlsBannerStyle(wb, XLS_GREEN_DARK,  true,  14, HorizontalAlignment.RIGHT);
+            CellStyle headerStyle     = xlsBodyStyle(wb,   null,            false, 12, HorizontalAlignment.CENTER);
+            CellStyle normalStyle     = xlsBodyStyle(wb,   null,            false, 12, HorizontalAlignment.LEFT);
+            CellStyle normalCenter    = xlsBodyStyle(wb,   null,            false, 12, HorizontalAlignment.CENTER);
+            CellStyle normalRight     = xlsBodyStyle(wb,   null,            false, 12, HorizontalAlignment.RIGHT);
+            CellStyle totalGreenStyle = xlsBannerStyle(wb, XLS_GREEN_DARK,  true,  12, HorizontalAlignment.LEFT);
 
-            header.addCell(logoCell);
-            header.addCell(infoCell);
-            document.add(header);
-            document.add(new Paragraph(" ").setFontSize(2));
-            document.add(new LineSeparator(new SolidLine(0.5f)).setMarginTop(2).setMarginBottom(8));
+            CellStyle currencyStyle = xlsBodyStyle(wb, null, false, 11, HorizontalAlignment.CENTER);
+            DataFormat fmt = wb.createDataFormat();
+            currencyStyle.setDataFormat(fmt.getFormat("R$ #,##0.00"));
 
-            // ── BANNER PRINCIPAL ─────────────────────────────────────────────
-            String osNumber = "OS" + LocalDate.now().getYear() + String.format("%02d%02d%02d", LocalDate.now().getMonthValue(), LocalDate.now().getDayOfMonth(), order.getId());
+            CellStyle currencyGreenStyle = xlsBodyStyle(wb, XLS_GREEN_LIGHT, false, 11, HorizontalAlignment.CENTER);
+            currencyGreenStyle.setDataFormat(fmt.getFormat("R$ #,##0.00"));
+
+            // ── Linhas 2-6 – cabeçalho da empresa (centrado) ────
+            String[] companyLines = {
+                    "CARMAQ SERVICE",
+                    "CNPJ: 60.526.327/0001-23",
+                    "Av. Das Araucárias, 4255 | 83707-065 | Araucária | Paraná",
+                    "Fone: 55 41 3346 1430     |      55 41 99663 1349",
+                    "vendas@carmaq.ind.br     |     service@carmaq.ind.br"
+            };
+            float[] companyFontSizes = {14f, 11f, 11f, 11f, 11f};
+            float[] companyHeights   = {20.25f, 20.25f, 20.25f, 21.75f, 21.75f};
+            for (int i = 0; i < companyLines.length; i++) {
+                Row r = ws.createRow(i + 1);
+                r.setHeightInPoints(companyHeights[i]);
+                org.apache.poi.ss.usermodel.Cell c = r.createCell(3);
+                c.setCellValue(companyLines[i]);
+                CellStyle s = xlsBodyStyle(wb, null, i == 0, companyFontSizes[i], HorizontalAlignment.CENTER);
+                c.setCellStyle(s);
+                ws.addMergedRegion(new CellRangeAddress(i + 1, i + 1, 3, 7));
+            }
+
+            // ── Linha 7 – ORDEM DE SERVIÇO DE MANUTENÇÃO + OS Num ───────────
+            Row r7 = ws.createRow(6);
+            r7.setHeightInPoints(27.75f);
+            
             boolean isGarantia = "VALENTIM".equalsIgnoreCase(order.getManutencaoOrigin());
             String bannerTitle = isGarantia ? "ORDEM DE SERVIÇO EM GARANTIA" : "ORDEM DE SERVIÇO DE MANUTENÇÃO";
+            xlsMergedCell(ws, wb, r7, 1, 6, 6, bannerTitle, greenDarkBold);
+            
+            String osNum = "OS" + LocalDate.now().getYear()
+                    + String.format("%02d%02d", LocalDate.now().getMonthValue(), LocalDate.now().getDayOfMonth())
+                    + String.format("%02d", order.getId());
+            xlsCell(r7, 7, osNum, greenDarkRight);
 
-            Table banner = new Table(UnitValue.createPercentArray(new float[]{75, 25})).useAllAvailableWidth();
-            banner.addCell(new Cell().setBackgroundColor(GREEN_DARK).setPadding(6).setBorder(Border.NO_BORDER)
-                    .add(new Paragraph(bannerTitle).setFont(bold).setFontSize(13).setFontColor(ColorConstants.WHITE)));
-            banner.addCell(new Cell().setBackgroundColor(GREEN_DARK).setPadding(6).setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.RIGHT)
-                    .add(new Paragraph(osNumber).setFont(bold).setFontSize(12).setFontColor(ColorConstants.WHITE)));
-            document.add(banner);
-
-            // ── SEÇÃO: DADOS DO CLIENTE ────────────────────────────────────────
-            document.add(new Paragraph("DADOS DO CLIENTE").setFont(bold).setFontSize(9).setMarginTop(10).setFontColor(GREEN_DARK));
-            Table clientTable = new Table(UnitValue.createPercentArray(new float[]{15, 50, 10, 25})).useAllAvailableWidth();
-            addClientRow(clientTable, bold, normal, "Cliente:", order.getClient().getCompanyName(), "Data:", order.getServiceDate() != null ? order.getServiceDate().format(PTBR) : "-");
-            addClientRow(clientTable, bold, normal, "Endereço:", safeStr(order.getClient().getAddress()), "Fone:", safeStr(order.getClient().getPhone()));
-            addClientRow(clientTable, bold, normal, "Contato:", safeStr(order.getClient().getContactName()), "Cidade:", extractCity(order.getClient().getAddress()));
-            document.add(clientTable);
-
-            // ── SEÇÃO: DADOS DA MÁQUINA ───────────────────────────────────────
-            document.add(new Paragraph("DADOS DA MÁQUINA").setFont(bold).setFontSize(9).setMarginTop(10).setFontColor(GREEN_DARK));
-            Table machineTable = new Table(UnitValue.createPercentArray(new float[]{15, 85})).useAllAvailableWidth();
-            machineTable.addCell(new Cell().add(new Paragraph("Máquina:").setFont(bold).setFontSize(9)).setBorder(new SolidBorder(0.5f)).setBackgroundColor(GREEN_LIGHT));
-            machineTable.addCell(new Cell().add(new Paragraph(safeStr(order.getMachine().getName()) + " (" + (order.getMachine().getMachineType() != null ? order.getMachine().getMachineType().name() : "") + ")").setFont(normal).setFontSize(9)).setBorder(new SolidBorder(0.5f)));
-            document.add(machineTable);
-
-            // ── TABELA DE SERVIÇOS E ITENS ───────────────────────────────────
-            document.add(new Paragraph("RELATÓRIO DE SERVIÇOS E PEÇAS").setFont(bold).setFontSize(9).setMarginTop(12).setFontColor(GREEN_DARK));
-            float[] colWidths = {6f, 8f, 10f, 48f, 14f, 14f};
-            Table itemsTable = new Table(UnitValue.createPercentArray(colWidths)).useAllAvailableWidth();
-
-            String[] tableHeaders = {"Unid", "Qtde", "Código", "Descrição do Serviço / Peça", "Unitário", "Total"};
-            for (String h : tableHeaders) {
-                itemsTable.addHeaderCell(new Cell().setBackgroundColor(GREEN_LIGHT).setBorder(new SolidBorder(0.5f)).setPadding(4).setTextAlignment(TextAlignment.CENTER)
-                        .add(new Paragraph(h).setFont(bold).setFontSize(9)));
+            // ── Linhas 8-11 – dados do cabeçalho (cliente ou Valentim) ────────
+            // Para garantia (Valentim) o cabeçalho é sempre da Valentim; para Carmarq é do cliente
+            String[][] clientData;
+            if (isGarantia) {
+                clientData = buildValentimClientData(order);
+            } else {
+                clientData = new String[][]{
+                    {"Cliente:",    order.getClient().getCompanyName(),          "Data:",   order.getServiceDate() != null ? order.getServiceDate().format(PTBR) : ""},
+                    {" Endereço:",  safeStr(order.getClient().getAddress()),      "Cidade:", extractCity(order.getClient().getAddress())},
+                    {"    CNPJ:",   safeStr(order.getClient().getCnpj()),         "Estado:", extractState(order.getClient().getAddress())},
+                    {"  Contato:",  safeStr(order.getClient().getContactName()), "Fone:",   safeStr(order.getClient().getPhone())},
+                };
             }
 
-            // Lógica de valores e filtros
+            // IE e email a exibir dependem da origem
+            String ieAExibir       = isGarantia ? "257.368.515" : order.getClient().getIe();
+            String emailAExibir    = isGarantia ? "wagner@valentin.tec.br" : order.getClient().getEmail();
+            float[] clientHeights  = {24f, 24f, 24f, 24f};
+            int[] clientRows = {7, 8, 9, 10};
+            for (int i = 0; i < clientData.length; i++) {
+                Row rr = ws.createRow(clientRows[i]);
+                rr.setHeightInPoints(clientHeights[i]);
+                org.apache.poi.ss.usermodel.Cell lbl   = rr.createCell(0); lbl.setCellValue(clientData[i][0]); lbl.setCellStyle(normalCenter);
+                org.apache.poi.ss.usermodel.Cell val   = rr.createCell(2); val.setCellValue(clientData[i][1]); val.setCellStyle(normalStyle);
+                org.apache.poi.ss.usermodel.Cell lbl2  = rr.createCell(6); lbl2.setCellValue(clientData[i][2]); lbl2.setCellStyle(normalRight);
+                org.apache.poi.ss.usermodel.Cell val2  = rr.createCell(7); val2.setCellValue(clientData[i][3]); val2.setCellStyle(normalCenter);
+                if (i == 2 && ieAExibir != null) {
+                    org.apache.poi.ss.usermodel.Cell ie = rr.createCell(5);
+                    ie.setCellValue("IE:" + ieAExibir);
+                    ie.setCellStyle(normalStyle);
+                }
+                ws.addMergedRegion(new CellRangeAddress(clientRows[i], clientRows[i], 0, 1));
+                // Linha de contato (i==3): quebra a mescla 2-5 para exibir email separadamente
+                if (i == 3 && emailAExibir != null) {
+                    org.apache.poi.ss.usermodel.Cell email = rr.createCell(4);
+                    email.setCellValue("Email: " + emailAExibir);
+                    email.setCellStyle(normalStyle);
+                    ws.addMergedRegion(new CellRangeAddress(clientRows[i], clientRows[i], 2, 3)); // nome
+                    ws.addMergedRegion(new CellRangeAddress(clientRows[i], clientRows[i], 4, 5)); // email
+                } else {
+                    ws.addMergedRegion(new CellRangeAddress(clientRows[i], clientRows[i], 2, 5));
+                }
+            }
+            
+            // ── Linhas Extras - DADOS DA MÁQUINA
+            Row rMachine = ws.createRow(11);
+            rMachine.setHeightInPoints(24f);
+            org.apache.poi.ss.usermodel.Cell mLbl = rMachine.createCell(0); mLbl.setCellValue("Máquina:"); mLbl.setCellStyle(normalCenter);
+            String machineTypeEnum = order.getMachine().getMachineType() != null ? order.getMachine().getMachineType().name() : "";
+            org.apache.poi.ss.usermodel.Cell mVal = rMachine.createCell(2); mVal.setCellValue(safeStr(order.getMachine().getModel()) + " (" + machineTypeEnum + ")"); mVal.setCellStyle(normalStyle);
+            ws.addMergedRegion(new CellRangeAddress(11, 11, 0, 1));
+            ws.addMergedRegion(new CellRangeAddress(11, 11, 2, 7));
+
+            // ── RELATÓRIO DE SERVIÇOS E PEÇAS banner
+            Row rBannerSrv = ws.createRow(12);
+            rBannerSrv.setHeightInPoints(27.75f);
+            xlsMergedCell(ws, wb, rBannerSrv, 0, 7, 7, "RELATÓRIO DE SERVIÇOS E PEÇAS", greenDarkBold);
+
+            // ── Cabeçalho da tabela 
+            Row r13 = ws.createRow(13);
+            r13.setHeightInPoints(21.75f);
+            String[] tableHeaders = {"Item", "Unid.", "Qtde.", "Código", "Descrição do Serviço / Peça", null, "R$ Unitario", "R$ Total"};
+            for (int i = 0; i < tableHeaders.length; i++) {
+                if (tableHeaders[i] != null) {
+                    org.apache.poi.ss.usermodel.Cell hc = r13.createCell(i);
+                    hc.setCellValue(tableHeaders[i]);
+                    hc.setCellStyle(headerStyle);
+                }
+            }
+            ws.addMergedRegion(new CellRangeAddress(13, 13, 4, 5));
+
+            int currentRow = 14; 
+                    
             double multiplier = "TECNICO".equals(userRole) ? 0.1 : 1.0;
             List<TimeTracking> times = timeTrackingRepository.findByServiceOrderId(order.getId());
-            double totalWorkHours = times.stream().filter(t -> "TRABALHO".equals(t.getType()) && t.getStartTime() != null && t.getEndTime() != null)
-                    .mapToLong(t -> java.time.Duration.between(t.getStartTime(), t.getEndTime()).toMinutes()).sum() / 60.0;
-            double totalTravelHours = times.stream().filter(t -> !"TRABALHO".equals(t.getType()) && t.getStartTime() != null && t.getEndTime() != null)
-                    .mapToLong(t -> java.time.Duration.between(t.getStartTime(), t.getEndTime()).toMinutes()).sum() / 60.0;
+            double totalWorkHours = calcHorasByType(times, "TRABALHO");
+            double totalTravelHours = calcHorasByType(times, null);
 
-            double valMaoObra = (order.getServiceValue() != null ? order.getServiceValue() : 0.0) * multiplier;
-            double valTravel = (order.getTravelValue() != null ? order.getTravelValue() : 0.0) * multiplier;
-            double valKm = "TECNICO".equals(userRole) ? 0.0 : (order.getDisplacementValue() != null ? order.getDisplacementValue() : 0.0);
+            double valMaoObra = (order.getServiceValue() != null ? order.getServiceValue() : 0.0);
+            double valTravel = (order.getTravelValue() != null ? order.getTravelValue() : 0.0);
+            double valKm = (order.getDisplacementValue() != null ? order.getDisplacementValue() : 0.0);
+            
+            int itemIdx = 1;
+            
+            // Helper local modificado para escrever a linha inteira diretamente
+            CellStyle rowBgNorm = xlsBodyStyle(wb, null, false, 11, HorizontalAlignment.CENTER);
+            CellStyle rowBgAlt = xlsBodyStyle(wb, XLS_GREEN_LIGHT, false, 11, HorizontalAlignment.CENTER);
+            CellStyle rowBgLNorm = xlsBodyStyle(wb, null, false, 11, HorizontalAlignment.LEFT);
+            CellStyle rowBgLAlt = xlsBodyStyle(wb, XLS_GREEN_LIGHT, false, 11, HorizontalAlignment.LEFT);
 
-            // Adicionar linhas fixas
-            addItemRowCompact(itemsTable, normal, "H", totalTravelHours, "TRV", "HORAS DESLOCAMENTO TÉCNICO", valTravel / (totalTravelHours > 0 ? totalTravelHours : 1), valTravel);
-            addItemRowCompact(itemsTable, normal, "H", totalWorkHours, "SRV", "HORAS TRABALHADAS (MÃO DE OBRA)", valMaoObra / (totalWorkHours > 0 ? totalWorkHours : 1), valMaoObra);
-            if (valKm > 0) addItemRowCompact(itemsTable, normal, "KM", 1.0, "KM", "DESLOCAMENTO (KM)", valKm, valKm);
+            // Add TRV Row
+            currentRow = writeItemRow(ws, wb, itemIdx++, currentRow, "H", totalTravelHours, "TRV", "HORAS DESLOCAMENTO TÉCNICO", 
+                totalTravelHours > 0 ? (valTravel / totalTravelHours) : valTravel, valTravel,
+                rowBgNorm, rowBgAlt, rowBgLNorm, rowBgLAlt, currencyStyle, currencyGreenStyle);
 
-            // Despesas e Peças
+            // Add SRV Row
+            currentRow = writeItemRow(ws, wb, itemIdx++, currentRow, "H", totalWorkHours, "SRV", "HORAS TRABALHADAS (MÃO DE OBRA)", 
+                totalWorkHours > 0 ? (valMaoObra / totalWorkHours) : valMaoObra, valMaoObra,
+                rowBgNorm, rowBgAlt, rowBgLNorm, rowBgLAlt, currencyStyle, currencyGreenStyle);
+
+            // Add KM Row if applicable
+            if (valKm > 0) {
+                currentRow = writeItemRow(ws, wb, itemIdx++, currentRow, "KM", 1.0, "KM", "DESLOCAMENTO (KM)", valKm, valKm,
+                    rowBgNorm, rowBgAlt, rowBgLNorm, rowBgLAlt, currencyStyle, currencyGreenStyle);
+            }
+
+            // Expeneses
             List<ServiceExpense> expenses = serviceExpenseRepository.findByServiceOrderId(order.getId());
             for (ServiceExpense exp : expenses) {
-                addItemRowCompact(itemsTable, normal, "V", 1.0, "EXP", exp.getExpenseType().name() + ": " + safeStr(exp.getDescription()), exp.getValue(), exp.getValue());
+                currentRow = writeItemRow(ws, wb, itemIdx++, currentRow, "V", 1.0, "EXP", exp.getExpenseType().name() + ": " + safeStr(exp.getDescription()), exp.getValue(), exp.getValue(),
+                    rowBgNorm, rowBgAlt, rowBgLNorm, rowBgLAlt, currencyStyle, currencyGreenStyle);
             }
 
+            // Parts
             List<ServicePart> parts = servicePartRepository.findByServiceOrderId(order.getId());
+            double partsTotal = 0.0;
             if (!parts.isEmpty()) {
-                double partsTotal = "TECNICO".equals(userRole) ? 0.0 : parts.stream().mapToDouble(p -> p.getUnitPrice() * p.getQuantity()).sum();
-                addItemRowCompact(itemsTable, normal, "CJ", 1.0, "PART", "CONJUNTO DE PEÇAS: " + buildPartsDescription(parts), partsTotal, partsTotal);
+                partsTotal = "TECNICO".equals(userRole) ? 0.0 : parts.stream().mapToDouble(p -> p.getUnitPrice() * p.getQuantity()).sum();
+                currentRow = writeItemRow(ws, wb, itemIdx++, currentRow, "CJ", 1.0, "PART", "CONJUNTO DE PEÇAS: " + buildPartsDescription(parts), partsTotal, partsTotal,
+                    rowBgNorm, rowBgAlt, rowBgLNorm, rowBgLAlt, currencyStyle, currencyGreenStyle);
             }
-
-            document.add(itemsTable);
-
-            // ── TOTAIS E PAGAMENTO ───────────────────────────────────────────
-            Table footerTable = new Table(UnitValue.createPercentArray(new float[]{70, 30})).useAllAvailableWidth().setMarginTop(10);
             
-            // Lado Esquerdo: Dados Bancários e Obs
-            Cell bankCell = new Cell().setBorder(Border.NO_BORDER).setFontSize(8);
-            bankCell.add(new Paragraph("DADOS PARA PAGAMENTO:").setFont(bold));
-            bankCell.add(new Paragraph("CARMAQ SERVICE LTDA | CNPJ: 60.526.327/0001-23\nITAU AG: 4685 CC: 98576-6 | PIX: 60526327000123").setFont(normal));
-            bankCell.add(new Paragraph("\nOBSERVAÇÕES: " + safeStr(order.getObservations())).setFont(normal));
-            footerTable.addCell(bankCell);
+            // Espaçador
+            ws.createRow(currentRow++).setHeightInPoints(16.5f);
 
-            // Lado Direito: Resumo Financeiro
-            double runningTotal = valMaoObra + valTravel + valKm + expenses.stream().mapToDouble(ServiceExpense::getValue).sum() + ("TECNICO".equals(userRole) ? 0 : parts.stream().mapToDouble(p -> p.getUnitPrice() * p.getQuantity()).sum());
+            // TOTAIS
+            double grossTotal = (order.getServiceValue() != null ? order.getServiceValue() : 0.0) +
+                                (order.getTravelValue() != null ? order.getTravelValue() : 0.0) +
+                                (order.getDisplacementValue() != null ? order.getDisplacementValue() : 0.0) +
+                                (order.getPartsValue() != null ? order.getPartsValue() : 0.0) +
+                                (expenses.stream().mapToDouble(ServiceExpense::getValue).sum());
+            
             double discount = order.getDiscountValue() != null ? order.getDiscountValue() : 0.0;
+            double totalBilled = grossTotal - discount;
             
-            Cell totalsCell = new Cell().setBorder(Border.NO_BORDER);
-            Table innerTotals = new Table(UnitValue.createPercentArray(new float[]{60, 40})).useAllAvailableWidth();
-            addInnerTotal(innerTotals, normal, "Subtotal:", runningTotal);
-            addInnerTotal(innerTotals, normal, "Desconto:", -discount);
-            addInnerTotal(innerTotals, bold, "TOTAL GERAL:", runningTotal - discount, GREEN_DARK, ColorConstants.WHITE);
-            totalsCell.add(innerTotals);
-            footerTable.addCell(totalsCell);
-            
-            document.add(footerTable);
+            if ("TECNICO".equals(userRole)) {
+                // Nova Regra: Repasse de 10% sobre a Base Líquida (Pós Impostos 12% e Taxa 3,50)
+                double imposto = totalBilled * 0.12;
+                double taxaBoleto = 3.50;
+                double baseLiquida = Math.max(0, totalBilled - imposto - taxaBoleto);
+                double totalComissao = baseLiquida * 0.10;
+                double totalReembolso = (order.getDisplacementValue() != null ? order.getDisplacementValue() : 0.0) +
+                                       (order.getPartsValue() != null ? order.getPartsValue() : 0.0) +
+                                       expenses.stream().mapToDouble(ServiceExpense::getValue).sum();
 
-            // ── ASSINATURAS ──────────────────────────────────────────────────
-            document.add(new Paragraph("\n\n").setFontSize(10));
-            Table signTable = new Table(UnitValue.createPercentArray(new float[]{45, 10, 45})).useAllAvailableWidth();
-            
-            Cell s1 = new Cell().setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.CENTER);
-            s1.add(new LineSeparator(new SolidLine(0.5f)).setWidth(UnitValue.createPercentValue(80)));
-            s1.add(new Paragraph("Assinatura do Técnico\n" + safeStr(order.getTechnician().getNome())).setFont(normal).setFontSize(8));
-            
-            Cell sEmpty = new Cell().setBorder(Border.NO_BORDER);
-            
-            Cell s2 = new Cell().setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.CENTER);
-            s2.add(new LineSeparator(new SolidLine(0.5f)).setWidth(UnitValue.createPercentValue(80)));
-            s2.add(new Paragraph("Assinatura do Cliente (Carimbo/Nome)\nData: ___/___/___").setFont(normal).setFontSize(8));
-            
-            signTable.addCell(s1);
-            signTable.addCell(sEmpty);
-            signTable.addCell(s2);
-            document.add(signTable);
+                // Detalhamento de Cálculo (Transparência para o Técnico)
+                Row ri = ws.createRow(currentRow++);
+                xlsCell(ri, 0, "Base de Faturamento (Bruto - Desc)", normalStyle);
+                ws.addMergedRegion(new CellRangeAddress(ri.getRowNum(), ri.getRowNum(), 0, 6));
+                xlsNum(ri, 7, totalBilled, currencyStyle);
 
-            // Rodapé logo do cliente (Garantia)
-            if (isGarantia) {
-                document.add(new Paragraph("\n").setFontSize(5));
-                try {
-                    byte[] vLogo = getClass().getResourceAsStream("/static/logo-valentin.png").readAllBytes();
-                    Image vImg = new Image(ImageDataFactory.create(vLogo)).setWidth(100).setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.CENTER);
-                    document.add(vImg);
-                } catch (Exception ignored) {}
+                Row rt = ws.createRow(currentRow++);
+                xlsCell(rt, 0, "Dedução Impostos (12%) + Taxas (3,50)", normalStyle);
+                ws.addMergedRegion(new CellRangeAddress(rt.getRowNum(), rt.getRowNum(), 0, 6));
+                xlsNum(rt, 7, -(imposto + taxaBoleto), currencyStyle);
+
+                // Comissão
+                Row rc = ws.createRow(currentRow++);
+                xlsCell(rc, 0, "Comissão Repasse (10% da Base Líquida)", normalStyle);
+                ws.addMergedRegion(new CellRangeAddress(rc.getRowNum(), rc.getRowNum(), 0, 6));
+                xlsNum(rc, 7, totalComissao, currencyStyle);
+
+                // Reembolso 
+                Row rr = ws.createRow(currentRow++);
+                xlsCell(rr, 0, "Reembolso Integral (KM + Peças + Despesas)", normalStyle);
+                ws.addMergedRegion(new CellRangeAddress(rr.getRowNum(), rr.getRowNum(), 0, 6));
+                xlsNum(rr, 7, totalReembolso, currencyStyle);
+
+                // Total a receber
+                Row rFin = ws.createRow(currentRow++);
+                xlsCell(rFin, 0, "TOTAL A RECEBER", totalGreenStyle);
+                ws.addMergedRegion(new CellRangeAddress(rFin.getRowNum(), rFin.getRowNum(), 0, 6));
+                xlsNum(rFin, 7, totalComissao + totalReembolso, totalGreenStyle);
+            } else {
+                Row rs = ws.createRow(currentRow++);
+                xlsCell(rs, 0, "Subtotal", normalStyle);
+                ws.addMergedRegion(new CellRangeAddress(rs.getRowNum(), rs.getRowNum(), 0, 6));
+                xlsNum(rs, 7, grossTotal, currencyStyle);
+
+                Row rd = ws.createRow(currentRow++);
+                xlsCell(rd, 0, "Desconto", normalStyle);
+                ws.addMergedRegion(new CellRangeAddress(rd.getRowNum(), rd.getRowNum(), 0, 6));
+                xlsNum(rd, 7, discount, currencyStyle);
+
+                Row rTotal = ws.createRow(currentRow++);
+                xlsCell(rTotal, 0, "TOTAL GERAL", totalGreenStyle);
+                ws.addMergedRegion(new CellRangeAddress(rTotal.getRowNum(), rTotal.getRowNum(), 0, 6));
+                xlsNum(rTotal, 7, totalBilled, totalGreenStyle);
             }
+
+            // Espaçador
+            ws.createRow(currentRow++).setHeightInPoints(16.5f);
+
+            // DADOS Bancários E Assinaturas
+            String techName = order.getTechnician() != null ? order.getTechnician().getNome() : "N/A";
+            String[][] footerRows = {
+                    {"OBSERVAÇÕES: " + safeStr(order.getObservations())},
+                    {null},
+                    {"DADOS PARA PAGAMENTO:"},
+                    {"CARMAQ SERVICE LTDA | CNPJ: 60.526.327/0001-23"},
+                    {"ITAU AG: 4685 CC: 98576-6 | PIX: 60526327000123"},
+                    {null},
+                    {null},
+                    {null},
+                    {"________________________________________________"}
+            };
+
+            for (String[] fr : footerRows) {
+                Row rr = ws.createRow(currentRow++);
+                rr.setHeightInPoints(18.75f);
+                if (fr[0] != null) {
+                    xlsCell(rr, 0, fr[0], normalStyle);
+                    ws.addMergedRegion(new CellRangeAddress(rr.getRowNum(), rr.getRowNum(), 0, 7));
+                }
+            }
+
+            // Assinaturas (split at row before last)
+            Row rSigName = ws.createRow(currentRow++);
+            xlsCell(rSigName, 0, "Assinatura do Técnico", normalCenter);
+            xlsCell(rSigName, 4, "Assinatura do Cliente (Carimbo/Nome)", normalCenter);
+            ws.addMergedRegion(new CellRangeAddress(rSigName.getRowNum(), rSigName.getRowNum(), 0, 3));
+            ws.addMergedRegion(new CellRangeAddress(rSigName.getRowNum(), rSigName.getRowNum(), 4, 7));
+            
+            Row rSigTech = ws.createRow(currentRow++);
+            xlsCell(rSigTech, 0, techName, normalCenter);
+            xlsCell(rSigTech, 4, "Data: ___/___/___", normalCenter);
+            ws.addMergedRegion(new CellRangeAddress(rSigTech.getRowNum(), rSigTech.getRowNum(), 0, 3));
+            ws.addMergedRegion(new CellRangeAddress(rSigTech.getRowNum(), rSigTech.getRowNum(), 4, 7));
+
+
+            wb.write(baos);
+            return baos.toByteArray();
 
         } catch (Exception e) {
-            throw new RuntimeException("Erro ao gerar PDF de manutenção: " + e.getMessage(), e);
+            throw new RuntimeException("Erro ao gerar XLSX de manutenção: " + e.getMessage(), e);
         }
+    }
 
-        return baos.toByteArray();
+    private int writeItemRow(XSSFSheet ws, XSSFWorkbook wb, int itemIdx, int currentRow, 
+                             String unit, double qty, String code, String desc, double vUnit, double vTotal,
+                             CellStyle rowBgNorm, CellStyle rowBgAlt, CellStyle rowBgLNorm, CellStyle rowBgLAlt,
+                             CellStyle curNorm, CellStyle curAlt) {
+        Row rr = ws.createRow(currentRow);
+        rr.setHeightInPoints(16.5f);
+        boolean isAlt = (itemIdx % 2 == 0);
+        CellStyle rowBg = isAlt ? rowBgAlt : rowBgNorm;
+        CellStyle rowBgL = isAlt ? rowBgLAlt : rowBgLNorm;
+        CellStyle curBg = isAlt ? curAlt : curNorm;
+
+        xlsNum(rr, 0, itemIdx, rowBg);
+        xlsCell(rr, 1, unit, rowBg);
+        xlsNum(rr, 2, qty, rowBg);
+        xlsCell(rr, 3, code, rowBg);
+        xlsCell(rr, 4, desc, rowBgL);
+        ws.addMergedRegion(new CellRangeAddress(currentRow, currentRow, 4, 5));
+        
+        org.apache.poi.ss.usermodel.Cell c6 = rr.createCell(6); c6.setCellValue(vUnit); c6.setCellStyle(curBg);
+        org.apache.poi.ss.usermodel.Cell c7 = rr.createCell(7); c7.setCellValue(vTotal); c7.setCellStyle(curBg);
+        return currentRow + 1;
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -334,13 +466,11 @@ public class ReportService {
                     + String.format("%02d", order.getId());
             xlsCell(r7, 7, osNum, greenDarkRight);
 
-            // ── Linhas 8-11 – dados do cliente ────────────────────────────────
-            String[][] clientData = {
-                    {"Cliente:",    order.getClient().getCompanyName(),     "Data:",   order.getServiceDate() != null ? order.getServiceDate().format(PTBR) : ""},
-                    {" Endereço:",  safeStr(order.getClient().getAddress()), "Cidade:", extractCity(order.getClient().getAddress())},
-                    {"    CNPJ:",   safeStr(order.getClient().getCnpj()),    "Estado:", extractState(order.getClient().getAddress())},
-                    {"  Contato:",  safeStr(order.getClient().getContactName()), "Fone:", safeStr(order.getClient().getPhone())},
-            };
+            // ── Linhas 8-11 – dados do cabeçalho: Instalação sempre usa dados da Valentim ────
+            // Instalação é sempre em nome da Valentim (origem do equipamento)
+            String[][] clientData = buildValentimClientData(order);
+            String ieAExibir = "257.368.515";
+            String emailAExibir = "wagner@valentin.tec.br";
             float[] clientHeights = {24f, 24f, 24f, 24f};
             int[] clientRows = {7, 8, 9, 10};
             for (int i = 0; i < clientData.length; i++) {
@@ -351,19 +481,22 @@ public class ReportService {
                 org.apache.poi.ss.usermodel.Cell lbl2  = rr.createCell(6); lbl2.setCellValue(clientData[i][2]); lbl2.setCellStyle(normalRight);
                 org.apache.poi.ss.usermodel.Cell val2  = rr.createCell(7); val2.setCellValue(clientData[i][3]); val2.setCellStyle(normalCenter);
                 // Linha CNPJ tem IE extra
-                if (i == 2 && order.getClient().getIe() != null) {
+                if (i == 2 && ieAExibir != null) {
                     org.apache.poi.ss.usermodel.Cell ie = rr.createCell(5);
-                    ie.setCellValue("IE:" + order.getClient().getIe());
+                    ie.setCellValue("IE:" + ieAExibir);
                     ie.setCellStyle(normalStyle);
                 }
-                // Linha contato tem email
-                if (i == 3 && order.getClient().getEmail() != null) {
-                    org.apache.poi.ss.usermodel.Cell email = rr.createCell(4);
-                    email.setCellValue("Email: " + order.getClient().getEmail());
-                    email.setCellStyle(normalStyle);
-                }
                 ws.addMergedRegion(new CellRangeAddress(clientRows[i], clientRows[i], 0, 1));
-                ws.addMergedRegion(new CellRangeAddress(clientRows[i], clientRows[i], 2, 5));
+                // Linha contato (i==3): quebra a mescla 2-5 para exibir email separadamente
+                if (i == 3 && emailAExibir != null) {
+                    org.apache.poi.ss.usermodel.Cell email = rr.createCell(4);
+                    email.setCellValue("Email: " + emailAExibir);
+                    email.setCellStyle(normalStyle);
+                    ws.addMergedRegion(new CellRangeAddress(clientRows[i], clientRows[i], 2, 3)); // nome do contato
+                    ws.addMergedRegion(new CellRangeAddress(clientRows[i], clientRows[i], 4, 5)); // email
+                } else {
+                    ws.addMergedRegion(new CellRangeAddress(clientRows[i], clientRows[i], 2, 5));
+                }
             }
 
             // ── Linha 12 – banner ENTREGA TECNICA ────────────────────────────
@@ -386,29 +519,41 @@ public class ReportService {
 
             // ── Linhas 14-19 – itens da OS ────────────────────────────────────
             double hourlyRate  = "VALENTIM".equalsIgnoreCase(order.getManutencaoOrigin()) ? 185.0 : 250.0;
-            double kmRodados   = 0.0;
+            double kmRodados   = order.getDisplacementValue() != null ? order.getDisplacementValue() / 2.2 : 0.0; // Estimativa reversa do KM baseado no valor cobrado
+            double kmRate      = "TECNICO".equalsIgnoreCase(userRole) ? 0.0 : 2.2; // Técnico não recebe KM como faturamento, apenas reembolso (que já está em Expenses)
+            
             List<ServiceExpense> expenses = serviceExpenseRepository.findByServiceOrderId(order.getId());
             double refeicao = expenses.stream()
                     .filter(e -> "ALIMENTACAO".equals(e.getExpenseType().name()))
                     .mapToDouble(ServiceExpense::getValue).sum();
-            List<ServicePart> parts = servicePartRepository.findByServiceOrderId(order.getId());
-
+            
             // Calcular horas trabalhadas da tabela de tempo
             List<TimeTracking> times = timeTrackingRepository.findByServiceOrderId(order.getId());
             double horasWork   = calcHorasByType(times, "TRABALHO");
             double horasTravel = calcHorasByType(times, null);  // todos exceto TRABALHO
 
-            double multiplier = "TECNICO".equals(userRole) ? 0.1 : 1.0;
-            double travelRate = 85.0 * multiplier;
-            double hourlyRateExec = hourlyRate * multiplier;
+            boolean isInstalacao = "INSTALACAO".equalsIgnoreCase(order.getServiceType());
+            double multiplier = "TECNICO".equalsIgnoreCase(userRole) ? 0.1 : 1.0;
+            double travelRate = isInstalacao ? 0.0 : (85.0 * multiplier);
+            double hourlyRateExec = isInstalacao ? 0.0 : (hourlyRate * multiplier);
+            
+            // Para instalação, o valor de repasse é fixo (geralmente o serviceValue já foi setado com o valor da máquina ou repasse)
+            double fixedInstallValue = 0.0;
+            if (isInstalacao) {
+                double basePrice = (order.getMachine().getInstallationPrice() != null ? order.getMachine().getInstallationPrice() : order.getServiceValue());
+                // Aplica 10% se for técnico, ou 100% se for admin/financeiro
+                fixedInstallValue = basePrice * multiplier;
+            }
+
+            String techName = order.getTechnician() != null ? order.getTechnician().getNome() : "N/A";
 
             Object[][] itemRows = {
-                    {1, "MO",   horasTravel,  "XXXX", "Hora Deslocamento",              travelRate,      null},
-                    {2, "MO",   horasWork,    "XXXX", "Hora Trabalhada",                hourlyRateExec, null},
-                    {3, "MO",   0.0,          "XXXX", null,                             0.0,       null},
-                    {4, "MO",   0.0,          "XXXX", null,                             0.0,       null},
-                    {5, "KM",   kmRodados,    "XXXX", "km ida e volta",                 2.2,       null},
-                    {6, "DESP", refeicao > 0 ? 1.0 : 0.0, "XXXX", "REFEIÇÃO 1 DIAS", refeicao > 0 ? refeicao : 0.0, null},
+                    {1, "MO",   horasTravel,  "TRV",  "Hora Deslocamento",              travelRate,      null},
+                    {2, "MO",   horasWork,    "SRV",  "Hora Trabalhada",                hourlyRateExec, null},
+                    {3, "UN",   isInstalacao ? 1.0 : 0.0, "INST", "INSTALAÇÃO TÉCNICA: " + order.getMachine().getModel(), fixedInstallValue, null},
+                    {4, "UN",   1.0,          "TEC", "TÉCNICO: " + techName,            0.0,       null},
+                    {5, "KM",   kmRodados,    "KM",  "km ida e volta",                 kmRate,    null},
+                    {6, "DESP", refeicao > 0 ? 1.0 : 0.0, "ALIM", "ALIMENTAÇÃO", refeicao > 0 ? refeicao : 0.0, null},
             };
 
             int[] itemRowNums = {13, 14, 15, 16, 17, 18};
@@ -456,25 +601,47 @@ public class ReportService {
             xlsNum(r22, 7, discountVal, normalStyle);
 
             // ── Linha 23 – Total Geral ────────────────────────────────────────
+            // Cálculo de Totais para Instalação
+            double grossTotal = (order.getServiceValue() != null ? order.getServiceValue() : 0.0) +
+                                (order.getTravelValue() != null ? order.getTravelValue() : 0.0) +
+                                (order.getDisplacementValue() != null ? order.getDisplacementValue() : 0.0) +
+                                (expenses.stream().mapToDouble(ServiceExpense::getValue).sum());
+            
+            double discount = order.getDiscountValue() != null ? order.getDiscountValue() : 0.0;
+            double totalBilled = grossTotal - discount;
+
             Row r23 = ws.createRow(22);
             r23.setHeightInPoints(18.75f);
             
+            int rowIdx = 23;
             if ("TECNICO".equals(userRole)) {
-                // Técnico não vê o Total Geral do faturamento da empresa
-                xlsCell(r23, 0, "Resumo de Repasse (Mão de Obra + Despesas)", totalGreenStyle);
-                ws.addMergedRegion(new CellRangeAddress(22, 22, 0, 6)); 
+                // Nova Regra para Instalação: 10% da Base Líquida
+                double imposto = totalBilled * 0.12;
+                double taxaBoleto = 3.50;
+                double baseLiquida = Math.max(0, totalBilled - imposto - taxaBoleto);
+                double totalComissao = baseLiquida * 0.10;
+                double totalReembolso = (order.getDisplacementValue() != null ? order.getDisplacementValue() : 0.0) +
+                                       (order.getPartsValue() != null ? order.getPartsValue() : 0.0) +
+                                       expenses.stream().mapToDouble(ServiceExpense::getValue).sum();
+
+                xlsCell(r23, 0, "Repasse (10% Base Líquida) + Reembolsos", totalGreenStyle);
+                ws.addMergedRegion(new CellRangeAddress(22, 22, 0, 6));
+                xlsNum(r23, 7, totalComissao + totalReembolso, totalGreenStyle);
+                
+                // Adicionar linhas extras de detalhamento se sobrar espaço ou no rodapé
+                Row rD1 = ws.createRow(rowIdx++);
+                xlsCell(rD1, 0, "Base Líquida após Impostos/Taxas: R$ " + String.format("%.2f", baseLiquida), normalStyle);
+                ws.addMergedRegion(new CellRangeAddress(23, 23, 0, 7));
             } else {
                 xlsCell(r23, 0, "Total Geral do Pedido", totalGreenStyle);
+                org.apache.poi.ss.usermodel.Cell tgCell = r23.createCell(7);
+                tgCell.setCellValue(totalBilled);
+                CellStyle tgCs = xlsBannerStyle(wb, XLS_GREEN_DARK, true, 12, HorizontalAlignment.RIGHT);
+                tgCs.setDataFormat(fmt.getFormat("R$ #,##0.00"));
+                tgCell.setCellStyle(tgCs);
             }
-            
-            org.apache.poi.ss.usermodel.Cell tgCell = r23.createCell(7);
-            tgCell.setCellFormula("H21-H22");
-            CellStyle tgCs = xlsBannerStyle(wb, XLS_GREEN_DARK, true, 12, HorizontalAlignment.RIGHT);
-            tgCs.setDataFormat(fmt.getFormat("R$ #,##0.00"));
-            tgCell.setCellStyle(tgCs);
 
             // ── Linhas 24 em diante – condições e dados de pagamento ──────────
-            String techName = order.getTechnician() != null ? order.getTechnician().getNome() : "";
             String[][] footerRows = {
                     {"Prazo de entrega: Serviço efetuado"},
                     {"Efetuado por: " + techName},
@@ -492,7 +659,7 @@ public class ReportService {
                     {"OBS: "},
             };
             boolean[] footerGreen = {false, false, true, false, false, false, false, false, false, false, false, false, false, false};
-            int rowIdx = 23;
+            // rowIdx já foi declarado acima e pode ter sido incrementado
             for (int i = 0; i < footerRows.length; i++) {
                 Row rr = ws.createRow(rowIdx++);
                 rr.setHeightInPoints(18.75f);
@@ -700,24 +867,6 @@ public class ReportService {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // Helpers – PDF (iText)
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    private void addClientRow(Table t, PdfFont bold, PdfFont normal,
-                               String l1, String v1, String l2, String v2) throws Exception {
-        Cell c1 = new Cell().setBorder(Border.NO_BORDER).setPaddingLeft(4);
-        c1.add(new Paragraph(l1).setFont(bold).setFontSize(10));
-        Cell c2 = new Cell().setBorder(Border.NO_BORDER);
-        c2.add(new Paragraph(safeStr(v1)).setFont(normal).setFontSize(10));
-        Cell c3 = new Cell().setBorder(Border.NO_BORDER);
-        c3.add(new Paragraph(l2).setFont(bold).setFontSize(10));
-        Cell c4 = new Cell().setBorder(Border.NO_BORDER);
-        c4.add(new Paragraph(safeStr(v2)).setFont(normal).setFontSize(10));
-        t.addCell(c1); t.addCell(c2); t.addCell(c3); t.addCell(c4);
-    }
-
-
-    // ═══════════════════════════════════════════════════════════════════════════
     // Helpers – XLSX (Apache POI)
     // ═══════════════════════════════════════════════════════════════════════════
 
@@ -843,34 +992,6 @@ public class ReportService {
                 .sum() / 60.0;
     }
 
-    private void addItemRowCompact(Table t, PdfFont font, String unit, double qty, String code, String desc, double vUnit, double vTotal) {
-        t.addCell(new Cell().add(new Paragraph(unit).setFont(font).setFontSize(8)).setTextAlignment(TextAlignment.CENTER).setBorder(new SolidBorder(0.3f)));
-        t.addCell(new Cell().add(new Paragraph(String.format("%.2f", qty)).setFont(font).setFontSize(8)).setTextAlignment(TextAlignment.CENTER).setBorder(new SolidBorder(0.3f)));
-        t.addCell(new Cell().add(new Paragraph(code).setFont(font).setFontSize(8)).setTextAlignment(TextAlignment.CENTER).setBorder(new SolidBorder(0.3f)));
-        t.addCell(new Cell().add(new Paragraph(desc).setFont(font).setFontSize(8)).setTextAlignment(TextAlignment.LEFT).setBorder(new SolidBorder(0.3f)));
-        t.addCell(new Cell().add(new Paragraph(vUnit > 0 ? String.format("%.2f", vUnit) : "-").setFont(font).setFontSize(8)).setTextAlignment(TextAlignment.RIGHT).setBorder(new SolidBorder(0.3f)));
-        t.addCell(new Cell().add(new Paragraph(vTotal > 0 ? String.format("R$ %.2f", vTotal) : "-").setFont(font).setFontSize(8)).setTextAlignment(TextAlignment.RIGHT).setBorder(new SolidBorder(0.3f)));
-    }
-
-    private void addInnerTotal(Table t, PdfFont font, String label, double value) {
-        addInnerTotal(t, font, label, value, null, null);
-    }
-
-    private void addInnerTotal(Table t, PdfFont font, String label, double value, DeviceRgb bg, com.itextpdf.kernel.colors.Color fontColor) {
-        Cell c1 = new Cell().add(new Paragraph(label).setFont(font).setFontSize(9)).setBorder(new SolidBorder(0.5f)).setPadding(2);
-        Cell c2 = new Cell().add(new Paragraph(String.format("R$ %.2f", value)).setFont(font).setFontSize(9)).setBorder(new SolidBorder(0.5f)).setPadding(2).setTextAlignment(TextAlignment.RIGHT);
-        if (bg != null) {
-            c1.setBackgroundColor(bg);
-            c2.setBackgroundColor(bg);
-        }
-        if (fontColor != null) {
-            c1.setFontColor(fontColor);
-            c2.setFontColor(fontColor);
-        }
-        t.addCell(c1);
-        t.addCell(c2);
-    }
-
     /** Monta descrição resumida das peças */
     private String buildPartsDescription(List<ServicePart> parts) {
         if (parts == null || parts.isEmpty()) return "";
@@ -887,4 +1008,18 @@ public class ReportService {
         // Para OUTRO, aceita qualquer (já que não há sub-tipo)
         return true;
     }
-}
+
+    /**
+     * Retorna os dados fixos da Valentim Rep. e Comércio Ltda para uso no cabeçalho do Excel.
+     * Utilizado em: Instalação (sempre) e Manutenção em Garantia (VALENTIM).
+     * Formato: { label, valor, label2, valor2 }
+     */
+    private String[][] buildValentimClientData(ServiceOrder order) {
+        return new String[][] {
+            {"Cliente:",    "VALENTIN REP.E COMERCIO LTDA",        "Data:",   order.getServiceDate() != null ? order.getServiceDate().format(PTBR) : ""},
+            {" Endereço:",  "Rua José Carlos Librelato,99,Vila São José", "Cidade:", "Içara"},
+            {"    CNPJ:",   "20.356.154/0001-28",                  "Estado:", "SC"},
+            {"  Contato:",  "Sr. Wagner",                          "Fone:",   "48 99187 4156"},
+        };
+    }
+}

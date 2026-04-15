@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { DollarSign, Users, ClipboardList, TrendingUp, Loader2, BarChart3 } from 'lucide-react'
+import { DollarSign, Users, ClipboardList, TrendingUp, Loader2, BarChart3, AlertCircle } from 'lucide-react'
 import axios from 'axios'
 import { statusMap } from '../../utils/statusUtils'
+import CardBreakdownTooltip from './CardBreakdownTooltip'
 import '../../Styles/Dashboards.css'
 const API_URL = 'http://localhost:8080/api/dashboard/stats'
 
@@ -80,6 +81,7 @@ export function ProprietarioDashboard() {
             </div>
 
             <div className="dashboard-grid">
+                <CardBreakdownTooltip cardType="revenue" month={month} year={year}>
                 <div className="stat-card">
                     <div className="stat-header">
                         <span className="stat-title">Faturamento Total</span>
@@ -90,7 +92,9 @@ export function ProprietarioDashboard() {
                         Bruto (Serviços, Viagem, Km, Peças e Despesas)
                     </span>
                 </div>
+                </CardBreakdownTooltip>
 
+                <CardBreakdownTooltip cardType="expenses" month={month} year={year}>
                 <div className="stat-card" style={{ borderLeft: '4px solid #ef4444' }}>
                     <div className="stat-header">
                         <span className="stat-title">Custos Operacionais</span>
@@ -101,7 +105,9 @@ export function ProprietarioDashboard() {
                         Repasse Técnico (10%) + Reembolsos (100%)
                     </span>
                 </div>
+                </CardBreakdownTooltip>
 
+                <CardBreakdownTooltip cardType="profit" month={month} year={year}>
                 <div className="stat-card" style={{ borderLeft: '4px solid #10b981' }}>
                     <div className="stat-header">
                         <span className="stat-title">Lucro Líquido</span>
@@ -112,6 +118,7 @@ export function ProprietarioDashboard() {
                         Total Líquido Estimado
                     </span>
                 </div>
+                </CardBreakdownTooltip>
 
                 <div className="stat-card">
                     <div className="stat-header">
@@ -152,7 +159,7 @@ export function ProprietarioDashboard() {
                         stats.recentOrders.map(order => (
                             <li key={order.id} className="list-item">
                                 <div className="item-info">
-                                    <h4>OS #{order.id} — {order.machineName}</h4>
+                                    <h4>#{order.osCode || order.id} {order.numeroChamado ? `— Chamado: ${order.numeroChamado}` : ''} {order.machineSpecs ? `— ${order.machineSpecs}` : ''} — {order.machineName}</h4>
                                     <p>{order.clientName} • {order.technicianName}</p>
                                 </div>
                                 {order.totalValue ? (

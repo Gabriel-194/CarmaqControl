@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 public class ServiceOrderResponseDTO {
 
     private Long id;
+    private String osCode;
 
     // Dados do cliente
     private Long clientId;
@@ -61,9 +62,12 @@ public class ServiceOrderResponseDTO {
     // Novos campos de custo (Fase 6)
     private Double travelValue;
     private Double displacementValue;
+    private Double boletoFee;
+    private Double taxValue;
 
     // Valor visível ao técnico
     private Double technicianPayment;
+    private Double reimbursementValue;
 
     // Status do pagamento do técnico: A_RECEBER ou RECEBIDO
     private String technicianPaymentStatus;
