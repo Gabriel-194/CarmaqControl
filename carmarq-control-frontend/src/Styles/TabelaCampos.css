@@ -59,6 +59,6 @@
 }
 
 .row-total td {
-    background-color: #f9fafb;
+    background-color: var(--background-color);
     border-top: 2px solid var(--border-color);
 }

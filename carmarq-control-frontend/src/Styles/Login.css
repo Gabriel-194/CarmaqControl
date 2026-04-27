@@ -124,7 +124,7 @@
 .demo-item {
     display: flex;
     justify-content: space-between;
-    background-color: #f3f4f6;
+    background-color: var(--border-color); /* Hover / Secundario */
     padding: 0.4rem 0.6rem;
     border-radius: 4px;
     margin-bottom: 0.5rem;

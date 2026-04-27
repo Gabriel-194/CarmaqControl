@@ -2,7 +2,8 @@ import React, { useState } from "react"
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { useAuth } from '../contexts/AuthContext'
-import { Wrench, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react'
+import { AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react'
+import logo from '../assets/logo-carmaq.png'
 import '../Styles/Login.css'
 
 export default function Login() {
@@ -59,10 +60,10 @@ export default function Login() {
         <main className="login-container">
             <div className="login-wrapper">
                 <div className="login-header">
-                    <div className="logo-box">
-                        <Wrench size={32} />
+                    <div className="logo-box" style={{ background: 'transparent', height: 'auto', width: 'auto', display: 'flex', justifyContent: 'center' }}>
+                        <img src={logo} alt="Carmaq" style={{ maxWidth: '240px', height: 'auto' }} />
                     </div>
-                    <h1>CarmarqControl</h1>
+                    <h1 style={{ marginBottom: '0.25rem', marginTop: '0.5rem', color: 'var(--text-color)', fontSize: '1.6rem' }}>CarmarqControl</h1>
                     <p style={{ color: 'var(--text-muted)' }}>Acesso ao Sistema</p>
                 </div>
 

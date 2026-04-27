@@ -25,7 +25,7 @@
 }
 
 .data-table thead {
-    background-color: #f9fafb;
+    background-color: var(--background-color);
 }
 
 .data-table th {
@@ -50,8 +50,12 @@
     transition: background-color 0.15s;
 }
 
-.data-table tbody tr:hover {
-    background-color: #f0fdf4;
+.machines-page .data-table tbody tr:hover {
+    background-color: #eefbf4;
+}
+
+[data-theme='dark'] .machines-page .data-table tbody tr:hover {
+    background-color: var(--table-hover-bg);
 }
 
 .data-table tbody tr:last-child td {
@@ -167,7 +171,7 @@
 }
 
 .btn-cancel {
-    background: white;
+    background: var(--card-bg);
     border: 1px solid var(--border-color);
     color: var(--text-color);
     padding: 0.6rem 1.25rem;

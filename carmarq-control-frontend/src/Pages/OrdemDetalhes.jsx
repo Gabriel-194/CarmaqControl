@@ -303,7 +303,7 @@ export default function OrdemDetalhes() {
                                 style={{ 
                                     width: '100%', 
                                     marginBottom: '0.5rem',
-                                    backgroundColor: (osData.status === 'PAGO' || osData.status === 'CANCELADA') ? '#f0f4f8' : 'white',
+                                    backgroundColor: (osData.status === 'PAGO' || osData.status === 'CANCELADA') ? 'var(--border-color)' : 'var(--input-bg)',
                                     cursor: (osData.status === 'PAGO' || osData.status === 'CANCELADA') ? 'not-allowed' : 'text'
                                 }}
                             />

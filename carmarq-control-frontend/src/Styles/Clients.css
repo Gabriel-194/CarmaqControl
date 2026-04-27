@@ -14,7 +14,7 @@
 }
 
 .clients-container {
-    background: white;
+    background: var(--card-bg);
     border: 1px solid var(--border-color, #e5e7eb);
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -28,7 +28,7 @@
     text-align: center;
     color: var(--text-muted, #6b7280);
     font-size: 1rem;
-    background-color: #f9fafb;
+    background-color: var(--background-color);
 }
 
 /* Tabela de Clientes */
@@ -39,7 +39,7 @@
 }
 
 .clients-table th {
-    background-color: #f9fafb;
+    background-color: var(--background-color);
     color: var(--text-muted, #6b7280);
     font-size: 0.75rem;
     text-transform: uppercase;
@@ -62,7 +62,7 @@
 }
 
 .clients-table tbody tr:hover {
-    background-color: #f3f4f6; /* Efeito hover mais suave */
+    background-color: var(--border-color); /* Hover / Secundario */ /* Efeito hover mais suave */
 }
 
 /* Textos da Tabela */
@@ -125,7 +125,7 @@
 }
 
 .modal-content {
-    background-color: white;
+    background-color: var(--card-bg);
     border-radius: 8px;
     padding: 1.5rem;
     width: 100%;

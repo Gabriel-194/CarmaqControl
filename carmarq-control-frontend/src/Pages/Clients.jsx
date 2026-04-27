@@ -109,16 +109,16 @@ const Clients = () => {
         <div className="dashboard-layout">
             <Sidebar />
             <main className="dashboard-content">
-                <div className="clients-page-header" style={{ width: '100%', gap: '20px' }}>
+                <div className="clients-page-header" style={{ width: '100%', gap: '1rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between' }}>
                     <h1 className="clients-page-title">Clientes</h1>
-                    <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', flex: '1 1 auto' }}>
                         <input 
                             type="text" 
                             placeholder="Buscar razao social, contato ou CNPJ..." 
-                            className="form-input"
+                            className="form-input search-input"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            style={{ margin: 0, padding: '0.4rem 0.8rem', width: '300px', borderRadius: '4px', border: '1px solid #ccc' }}
+                            style={{ margin: 0, padding: '0.5rem', flex: '1 1 200px', borderRadius: '4px', border: '1px solid #ccc' }}
                         />
                         <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '14px', color: '#666', cursor: 'pointer' }}>
                             <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} />
@@ -138,61 +138,63 @@ const Clients = () => {
                     ) : clients.length === 0 ? (
                         <div className="clients-empty-state">Nenhum cliente cadastrado no momento.</div>
                     ) : (
-                        <table className="clients-table">
-                            <thead>
-                                <tr>
-                                    <th>Empresa</th>
-                                    <th>Contato</th>
-                                    <th>Contatos Fixos</th>
-                                    <th>Endereço e CEP</th>
-                                    <th>Status</th>
-                                    {canAdd && (
-                                        <th style={{ textAlign: 'right' }}>Ações</th>
-                                    )}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredClients.map(client => (
-                                    <tr 
-                                        key={client.id} 
-                                        style={{ opacity: client.active ? 1 : 0.6 }}
-                                        onMouseEnter={() => handleMouseEnter(client)}
-                                        onMouseLeave={handleMouseLeave}
-                                        onMouseMove={handleMouseMove}
-                                    >
-                                        <td className="td-company">{client.companyName}</td>
-                                        <td className="td-contact">{client.contactName}</td>
-                                        <td>
-                                            <div>{client.email}</div>
-                                            <div style={{ color: 'var(--text-muted)' }}>{client.phone}</div>
-                                        </td>
-                                        <td>
-                                            <div style={{ fontWeight: 500 }}>{client.cep}</div>
-                                            <div style={{ color: 'var(--text-muted)' }}>{client.address}</div>
-                                        </td>
-                                        <td>
-                                            <span style={{color: client.active ? 'var(--primary-color, #10b981)' : '#ef4444', fontWeight: 600}}>
-                                                {client.active ? 'Ativo' : 'Inativo'}
-                                            </span>
-                                        </td>
+                        <div className="responsive-table-wrapper">
+                            <table className="clients-table">
+                                <thead>
+                                    <tr>
+                                        <th>Empresa</th>
+                                        <th>Contato</th>
+                                        <th>Contatos Fixos</th>
+                                        <th>Endereço e CEP</th>
+                                        <th>Status</th>
                                         {canAdd && (
-                                            <td>
-                                                <div className="action-buttons">
-                                                    {client.active ? (
-                                                        <>
-                                                            <button onClick={() => handleOpenModal(client)} className="btn-edit">Editar</button>
-                                                            {isOwner && <button onClick={() => handleDelete(client.id)} className="btn-delete">Excluir</button>}
-                                                        </>
-                                                    ) : (
-                                                        isOwner && <button onClick={() => handleReactivate(client.id)} className="btn-edit" style={{ color: 'var(--primary-color, #10b981)' }}>Reativar</button>
-                                                    )}
-                                                </div>
-                                            </td>
+                                            <th style={{ textAlign: 'right' }}>Ações</th>
                                         )}
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {filteredClients.map(client => (
+                                        <tr 
+                                            key={client.id} 
+                                            style={{ opacity: client.active ? 1 : 0.6 }}
+                                            onMouseEnter={() => handleMouseEnter(client)}
+                                            onMouseLeave={handleMouseLeave}
+                                            onMouseMove={handleMouseMove}
+                                        >
+                                            <td className="td-company">{client.companyName}</td>
+                                            <td className="td-contact">{client.contactName}</td>
+                                            <td>
+                                                <div>{client.email}</div>
+                                                <div style={{ color: 'var(--text-muted)' }}>{client.phone}</div>
+                                            </td>
+                                            <td>
+                                                <div style={{ fontWeight: 500 }}>{client.cep}</div>
+                                                <div style={{ color: 'var(--text-muted)' }}>{client.address}</div>
+                                            </td>
+                                            <td>
+                                                <span style={{color: client.active ? 'var(--primary-color, #10b981)' : '#ef4444', fontWeight: 600}}>
+                                                    {client.active ? 'Ativo' : 'Inativo'}
+                                                </span>
+                                            </td>
+                                            {canAdd && (
+                                                <td>
+                                                    <div className="action-buttons">
+                                                        {client.active ? (
+                                                            <>
+                                                                <button onClick={() => handleOpenModal(client)} className="btn-edit">Editar</button>
+                                                                {isOwner && <button onClick={() => handleDelete(client.id)} className="btn-delete">Excluir</button>}
+                                                            </>
+                                                        ) : (
+                                                            isOwner && <button onClick={() => handleReactivate(client.id)} className="btn-edit" style={{ color: 'var(--primary-color, #10b981)' }}>Reativar</button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            )}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     )}
                 </div>
 

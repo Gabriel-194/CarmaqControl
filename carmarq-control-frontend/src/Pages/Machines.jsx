@@ -125,10 +125,10 @@ export default function Machines() {
     }
 
     return (
-        <div className="dashboard-layout">
+        <div className="dashboard-layout machines-page">
             <Sidebar />
             <main className="dashboard-content">
-                <header className="page-header">
+                <header className="page-header" style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between' }}>
                     <div>
                         <h1 className="page-title">Biblioteca de Máquinas</h1>
                         <p className="page-subtitle">Gerencie os modelos e especificações técnicas</p>
@@ -138,8 +138,8 @@ export default function Machines() {
                     </button>
                 </header>
 
-                <div className="filters-bar">
-                    <div className="search-group">
+                <div className="filters-bar" style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center' }}>
+                    <div className="search-group" style={{ flex: '1 1 250px' }}>
                         <Search className="search-icon" />
                         <input
                             type="text"
@@ -169,7 +169,7 @@ export default function Machines() {
                         <p>Nenhuma máquina encontrada.</p>
                     </div>
                 ) : (
-                    <div className="table-container">
+                    <div className="table-container responsive-table-wrapper">
                         <table className="data-table">
                             <thead>
                                 <tr>

@@ -44,7 +44,7 @@ export default function Ordens() {
                 month: month || undefined,
                 year: year || undefined
             }
-            
+
             const res = await axios.get(API_URL, { params, withCredentials: true })
             setOrdens(res.data.content || [])
             setTotalPages(res.data.totalPages || 0)
@@ -65,43 +65,16 @@ export default function Ordens() {
 
     const filtered = ordens
 
-
-
     const formatDate = (dateStr) => {
         if (!dateStr) return '—'
         return new Date(dateStr).toLocaleDateString('pt-BR')
     }
 
-    const handleExportExcel = async () => {
-        try {
-            const params = {
-                search: searchTerm || undefined,
-                status: statusFilter || undefined,
-                month: month || undefined,
-                year: year || undefined
-            }
-            const response = await axios.get(`${API_URL}/export-excel`, {
-                params,
-                responseType: 'blob',
-                withCredentials: true
-            })
-            const url = window.URL.createObjectURL(new Blob([response.data]))
-            const link = document.createElement('a')
-            link.href = url
-            link.setAttribute('download', 'Relatorio_Ordens_de_Servico.xlsx')
-            document.body.appendChild(link)
-            link.click()
-            link.remove()
-        } catch (error) {
-            console.error('Erro ao exportar excel', error)
-        }
-    }
-
     return (
-        <div className="dashboard-layout">
+        <div className="dashboard-layout ordens-page">
             <Sidebar />
             <main className="dashboard-content">
-                <header className="page-header">
+                <header className="page-header" style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between' }}>
                     <div>
                         <h1 className="page-title">Ordens de Serviço</h1>
                         <p className="page-subtitle">Gerencie e acompanhe as solicitações</p>
@@ -127,18 +100,9 @@ export default function Ordens() {
                             className="search-input"
                         />
                     </div>
-                    
+
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        {(user?.role === 'PROPRIETARIO' || user?.role === 'FINANCEIRO') && (
-                            <button
-                                className="btn-secondary"
-                                onClick={handleExportExcel}
-                                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', height: '100%', padding: '0 1rem' }}
-                                title="Exportar Tabela de Ordens em Planilha Excel"
-                            >
-                                <Download size={18} /> Excel
-                            </button>
-                        )}
+
                         <select
                             className="btn-secondary"
                             value={statusFilter}
@@ -154,8 +118,8 @@ export default function Ordens() {
                             <option value="REQUER_INSPECAO">Requer Inspeção</option>
                         </select>
 
-                        <select 
-                            value={month} 
+                        <select
+                            value={month}
                             onChange={(e) => setMonth(e.target.value)}
                             className="btn-secondary"
                             style={{ cursor: 'pointer', height: '100%' }}
@@ -175,8 +139,8 @@ export default function Ordens() {
                             <option value={12}>Dezembro</option>
                         </select>
 
-                        <select 
-                            value={year} 
+                        <select
+                            value={year}
                             onChange={(e) => setYear(parseInt(e.target.value))}
                             className="btn-secondary"
                             style={{ cursor: 'pointer', height: '100%' }}
@@ -198,7 +162,7 @@ export default function Ordens() {
                         <p>Nenhuma ordem de serviço encontrada.</p>
                     </div>
                 ) : (
-                    <div className="table-container">
+                    <div className="table-container responsive-table-wrapper">
                         <table className="data-table">
                             <thead>
                                 <tr>
@@ -228,20 +192,13 @@ export default function Ordens() {
                                         <td className="font-mono" style={{ fontSize: '0.85rem' }}>{os.numeroChamado || '—'}</td>
                                         <td className="font-bold">{os.clientName}</td>
                                         <td>
-                                            <span style={{ 
-                                                fontSize: '0.75rem', 
-                                                padding: '0.2rem 0.5rem', 
-                                                borderRadius: '4px',
-                                                backgroundColor: os.serviceType === 'INSTALACAO' ? '#eff6ff' : '#fff7ed',
-                                                color: os.serviceType === 'INSTALACAO' ? '#1e40af' : '#9a3412',
-                                                fontWeight: '600'
-                                            }}>
+                                            <span className={`service-type-badge ${os.serviceType === 'INSTALACAO' ? 'service-type-installation' : 'service-type-maintenance'}`}>
                                                 {os.serviceType === 'INSTALACAO' ? 'Instalação' : 'Manutenção'}
                                             </span>
                                         </td>
                                         <td>
-                                            <span style={{ 
-                                                fontSize: '0.75rem', 
+                                            <span style={{
+                                                fontSize: '0.75rem',
                                                 color: (os.serviceType === 'INSTALACAO' || os.manutencaoOrigin === 'VALENTIM') ? '#059669' : '#0284c7',
                                                 fontWeight: '700'
                                             }}>
@@ -276,16 +233,16 @@ export default function Ordens() {
                         </table>
 
                         <div className="pagination-controls" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: '1.5rem', padding: '1rem' }}>
-                            <button 
-                                className="btn-secondary" 
+                            <button
+                                className="btn-secondary"
                                 onClick={() => setPage(prev => Math.max(0, prev - 1))}
                                 disabled={page === 0 || loading}
                             >
                                 Anterior
                             </button>
                             <span style={{ fontWeight: '500' }}>Página {page + 1} de {totalPages}</span>
-                            <button 
-                                className="btn-secondary" 
+                            <button
+                                className="btn-secondary"
                                 onClick={() => setPage(prev => prev + 1)}
                                 disabled={(page + 1) >= totalPages || loading}
                             >

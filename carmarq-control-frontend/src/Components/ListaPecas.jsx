@@ -103,7 +103,7 @@ export default function ListaPecas({ serviceOrderId, orderStatus, onUpdate }) {
     return (
         <div className="pecas-container">
             {isEditable && !isLocked ? (
-                <div className="add-peca-form" style={{ backgroundColor: isEditing ? '#f0fdf4' : 'transparent', padding: isEditing ? '1rem' : '0', borderRadius: '8px', border: isEditing ? '1px solid var(--primary-color)' : 'none', marginBottom: isEditing ? '1rem' : '0' }}>
+                <div className="add-peca-form" style={{ backgroundColor: isEditing ? 'var(--primary-light)' : 'transparent', padding: isEditing ? '1rem' : '0', borderRadius: '8px', border: isEditing ? '1px solid var(--primary-color)' : 'none', marginBottom: isEditing ? '1rem' : '0' }}>
                     {isEditing && <h4 style={{ width: '100%', marginBottom: '0.5rem', color: 'var(--primary-color)' }}>Editando Peça</h4>}
                     <input
                         type="text"

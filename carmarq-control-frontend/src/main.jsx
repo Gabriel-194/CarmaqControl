@@ -2,6 +2,7 @@ import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
+import { ThemeProvider } from './contexts/ThemeContext'
 import axios from 'axios'
 
 // Configuração Global do Axios para Segurança (CSRF + Cookies)
@@ -24,45 +25,47 @@ import Machines from './Pages/Machines'
 
 createRoot(document.getElementById('root')).render(
     <React.StrictMode>
-        <AuthProvider>
-            <BrowserRouter>
-                <Toaster />
-                <Routes>
-                    <Route path="/" element={<Login />} />
+        <ThemeProvider>
+            <AuthProvider>
+                <BrowserRouter>
+                    <Toaster />
+                    <Routes>
+                        <Route path="/" element={<Login />} />
 
-                    {/* Rotas Protegidas */}
-                    <Route path="/dashboard" element={
-                        <PrivateRoute><Dashboard /></PrivateRoute>
-                    } />
+                        {/* Rotas Protegidas */}
+                        <Route path="/dashboard" element={
+                            <PrivateRoute><Dashboard /></PrivateRoute>
+                        } />
 
-                    <Route path="/ordens" element={
-                        <PrivateRoute><Ordens /></PrivateRoute>
-                    } />
+                        <Route path="/ordens" element={
+                            <PrivateRoute><Ordens /></PrivateRoute>
+                        } />
 
-                    <Route path="/ordens/:id" element={
-                        <PrivateRoute><OrdemDetalhes /></PrivateRoute>
-                    } />
+                        <Route path="/ordens/:id" element={
+                            <PrivateRoute><OrdemDetalhes /></PrivateRoute>
+                        } />
 
-                    <Route path="/nova-os" element={
-                        <PrivateRoute roles={['PROPRIETARIO', 'TECNICO']}><NovaOS /></PrivateRoute>
-                    } />
+                        <Route path="/nova-os" element={
+                            <PrivateRoute roles={['PROPRIETARIO', 'TECNICO']}><NovaOS /></PrivateRoute>
+                        } />
 
-                    <Route path="/usuarios" element={
-                        <PrivateRoute roles={['PROPRIETARIO']}><Usuarios /></PrivateRoute>
-                    } />
+                        <Route path="/usuarios" element={
+                            <PrivateRoute roles={['PROPRIETARIO']}><Usuarios /></PrivateRoute>
+                        } />
 
-                    <Route path="/clientes" element={
-                        <PrivateRoute roles={['PROPRIETARIO', 'FINANCEIRO', 'TECNICO']}><Clients /></PrivateRoute>
-                    } />
+                        <Route path="/clientes" element={
+                            <PrivateRoute roles={['PROPRIETARIO', 'FINANCEIRO', 'TECNICO']}><Clients /></PrivateRoute>
+                        } />
 
-                    {/* Nova rota: Biblioteca de Máquinas */}
-                    <Route path="/maquinas" element={
-                        <PrivateRoute roles={['PROPRIETARIO', 'FINANCEIRO', 'TECNICO']}><Machines /></PrivateRoute>
-                    } />
+                        {/* Nova rota: Biblioteca de Máquinas */}
+                        <Route path="/maquinas" element={
+                            <PrivateRoute roles={['PROPRIETARIO', 'FINANCEIRO', 'TECNICO']}><Machines /></PrivateRoute>
+                        } />
 
-                    <Route path="*" element={<Navigate to="/" />} />
-                </Routes>
-            </BrowserRouter>
-        </AuthProvider>
+                        <Route path="*" element={<Navigate to="/" />} />
+                    </Routes>
+                </BrowserRouter>
+            </AuthProvider>
+        </ThemeProvider>
     </React.StrictMode>
 )

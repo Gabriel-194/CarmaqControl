@@ -17,7 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 // Serviço para gerenciamento de registros de tempo
@@ -29,11 +31,41 @@ public class TimeTrackingService {
     private final ServiceOrderRepository serviceOrderRepository;
     private final ServiceOrderService serviceOrderService;
 
+    /**
+     * Mapa de prioridade de exibição dos tipos de lançamento de horas.
+     * Dentro de um mesmo dia, a ordem correta é:
+     *   1) Saída (SAIDA_SEDE / SAIDA_HOTEL) — aparece primeiro
+     *   2) Trabalho (TRABALHO)
+     *   3) Retorno (RETORNO_HOTEL / RETORNO_SEDE) — aparece por último
+     */
+    private static final Map<String, Integer> TYPE_DISPLAY_ORDER = Map.of(
+            "SAIDA_SEDE",     1,
+            "SAIDA_HOTEL",    1,
+            "CHEGADA_CLIENTE",2,
+            "TRABALHO",       3,
+            "RETORNO_HOTEL",  4,
+            "RETORNO_SEDE",   4
+    );
+
+    /** Retorna a prioridade de exibição para um tipo; tipos desconhecidos ficam no final. */
+    private int getTypeOrder(String type) {
+        return TYPE_DISPLAY_ORDER.getOrDefault(type, 99);
+    }
+
     @Transactional(readOnly = true)
     public TimeTrackingListDTO getTimesByServiceOrderId(Long serviceOrderId) {
         validateOsOwnership(serviceOrderId);
         List<TimeTrackingResponseDTO> records = timeTrackingRepository.findByServiceOrderId(serviceOrderId).stream()
                 .map(this::mapToDTO)
+                .sorted(Comparator
+                        // 1ª prioridade: data do apontamento (cronológica)
+                        .comparing(TimeTrackingResponseDTO::getRegisteredDate,
+                                   Comparator.nullsLast(Comparator.naturalOrder()))
+                        // 2ª prioridade: tipo do lançamento (saída → trabalho → retorno)
+                        .thenComparingInt(r -> getTypeOrder(r.getType()))
+                        // 3ª prioridade: hora de início (empate dentro do mesmo tipo)
+                        .thenComparing(TimeTrackingResponseDTO::getStartTime,
+                                       Comparator.nullsLast(Comparator.naturalOrder())))
                 .collect(Collectors.toList());
         
         long totalMinutes = records.stream()

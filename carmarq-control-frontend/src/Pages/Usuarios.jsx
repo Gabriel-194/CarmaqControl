@@ -153,7 +153,7 @@ export default function Usuarios() {
                                 <div className="user-avatar-large">
                                     {user.nome[0].toUpperCase()}
                                 </div>
-                                <div className="user-info">
+                                <div className="user-card-info">
                                     <h3>{user.nome} {!user.ativo && <span style={{color:'red', fontSize:'12px'}}>(Inativo)</span>}</h3>
                                     <p title={user.email}>{user.email}</p>
                                     <span className={`role-badge role-${user.role.toLowerCase()}`}>

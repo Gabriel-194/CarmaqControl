@@ -46,7 +46,7 @@
 }
 
 .card {
-    background: white;
+    background: var(--card-bg);
     border-radius: 8px;
     border: 1px solid var(--border-color);
     padding: 1.5rem;
@@ -84,7 +84,7 @@
 
 /* Tabs */
 .tabs-container {
-    background: white;
+    background: var(--card-bg);
     border-radius: 8px;
     border: 1px solid var(--border-color);
     overflow: hidden;
@@ -93,7 +93,7 @@
 .tabs-header {
     display: flex;
     border-bottom: 1px solid var(--border-color);
-    background: #f9fafb;
+    background: var(--background-color);
 }
 
 .tab-btn {
@@ -112,7 +112,7 @@
 }
 
 .tab-btn.active {
-    background: white;
+    background: var(--card-bg);
     color: var(--primary-color);
     border-bottom: 2px solid var(--primary-color);
 }
@@ -156,7 +156,7 @@
 .finance-section-title {
     margin-bottom: 0.5rem;
     letter-spacing: 0.025em;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid var(--border-color);
     padding-bottom: 0.25rem;
 }
 

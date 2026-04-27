@@ -171,7 +171,7 @@ export default function TabelaTempos({ serviceOrderId, userRole, osTipo, orderSt
 
             {/* Formulário de lançamento manual / edição */}
             {showManual && (
-                <div style={{ background: '#f9fafb', padding: '1rem', borderRadius: '8px', marginBottom: '1rem', border: '1px solid var(--border-color)' }}>
+                <div style={{ background: 'var(--card-bg)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem', border: '1px solid var(--border-color)' }}>
                     <h4 style={{ marginBottom: '1rem', color: 'var(--text-color)' }}>
                         {isEditing ? 'Editar Registro de Tempo' : 'Novo Lançamento Manual'}
                     </h4>
@@ -221,65 +221,68 @@ export default function TabelaTempos({ serviceOrderId, userRole, osTipo, orderSt
                 </div>
             )}
 
-            <table className="simple-table">
-                <thead>
-                    <tr>
-                        <th>Tipo</th>
-                        <th>Descrição</th>
-                        <th>Início</th>
-                        <th>Fim</th>
-                        <th className="text-right">Duração</th>
-                        {userRole === 'TECNICO' && <th className="text-right">Ações</th>}
-                    </tr>
-                </thead>
-                <tbody>
-                    {registros.length === 0 ? (
-                        <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Nenhum registro de tempo.</td></tr>
-                    ) : (
-                        registros.map(reg => (
-                            <tr key={reg.id}>
-                                <td>
-                                    <span style={{ fontSize: '0.8rem', background: '#f0fdf4', padding: '0.2rem 0.5rem', borderRadius: '4px', color: 'var(--primary-color)', display: 'block', marginBottom: '4px' }}>
-                                        {typeLabels[reg.type] || reg.type}
-                                    </span>
-                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                        {reg.registeredDate ? reg.registeredDate.split('-').reverse().join('/') : ''}
-                                    </span>
-                                </td>
-                                <td>{reg.description || '—'}</td>
-                                <td>{reg.startTimeFormatted}</td>
-                                <td>{reg.endTimeFormatted}</td>
-                                <td className="text-right font-mono">{reg.durationFormatted}</td>
-                                {userRole === 'TECNICO' && (
-                                    <td className="text-right">
-                                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                            <button 
-                                                onClick={() => handleEditClick(reg)} 
-                                                style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', color: 'var(--primary-color)', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '4px', cursor: 'pointer' }}
-                                            >
-                                                Editar
-                                            </button>
-                                            <button 
-                                                onClick={() => handleDeleteClick(reg.id)} 
-                                                style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '4px', cursor: 'pointer' }}
-                                            >
-                                                Excluir
-                                            </button>
-                                        </div>
-                                    </td>
-                                )}
-                            </tr>
-                        ))
-                    )}
-                    {registros.length > 0 && (
-                        <tr className="row-total">
-                            <td colSpan={userRole === 'TECNICO' ? 4 : 4}>Total Trabalhado</td>
-                            <td className="text-right font-bold">{totalFormatted}</td>
-                            {userRole === 'TECNICO' && <td></td>}
+            {/* Wrapper de responsividade */}
+            <div className="responsive-table-wrapper">
+                <table className="simple-table">
+                    <thead>
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Descrição</th>
+                            <th>Início</th>
+                            <th>Fim</th>
+                            <th className="text-right">Duração</th>
+                            {userRole === 'TECNICO' && <th className="text-right">Ações</th>}
                         </tr>
-                    )}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {registros.length === 0 ? (
+                            <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Nenhum registro de tempo.</td></tr>
+                        ) : (
+                            registros.map(reg => (
+                                <tr key={reg.id}>
+                                    <td>
+                                        <span style={{ fontSize: '0.8rem', background: 'var(--primary-light)', padding: '0.2rem 0.5rem', borderRadius: '4px', color: 'var(--primary-color)', display: 'block', marginBottom: '4px' }}>
+                                            {typeLabels[reg.type] || reg.type}
+                                        </span>
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                            {reg.registeredDate ? reg.registeredDate.split('-').reverse().join('/') : ''}
+                                        </span>
+                                    </td>
+                                    <td>{reg.description || '—'}</td>
+                                    <td>{reg.startTimeFormatted}</td>
+                                    <td>{reg.endTimeFormatted}</td>
+                                    <td className="text-right font-mono">{reg.durationFormatted}</td>
+                                    {userRole === 'TECNICO' && (
+                                        <td className="text-right">
+                                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                                <button 
+                                                    onClick={() => handleEditClick(reg)} 
+                                                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', color: 'var(--primary-color)', background: 'transparent', border: '1px solid var(--primary-color)', borderRadius: '4px', cursor: 'pointer' }}
+                                                >
+                                                    Editar
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleDeleteClick(reg.id)} 
+                                                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', color: 'var(--danger-color, #ef4444)', background: 'transparent', border: '1px solid var(--danger-color, #ef4444)', borderRadius: '4px', cursor: 'pointer' }}
+                                                >
+                                                    Excluir
+                                                </button>
+                                            </div>
+                                        </td>
+                                    )}
+                                </tr>
+                            ))
+                        )}
+                        {registros.length > 0 && (
+                            <tr className="row-total">
+                                <td colSpan={userRole === 'TECNICO' ? 4 : 4}>Total Trabalhado</td>
+                                <td className="text-right font-bold">{totalFormatted}</td>
+                                {userRole === 'TECNICO' && <td></td>}
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </div>
     )
 }

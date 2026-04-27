@@ -148,7 +148,7 @@ export default function ListaDespesas({ serviceOrderId, orderStatus, userRole, s
     return (
         <div className="lista-despesas-container">
             {isEditable && !isLocked ? (
-                <div className="despesa-form-card" style={{ border: isEditing ? '1px solid var(--primary-color)' : 'none', backgroundColor: isEditing ? '#f0fdf4' : 'white' }}>
+                <div className="despesa-form-card" style={{ border: isEditing ? '1px solid var(--primary-color)' : 'none', backgroundColor: isEditing ? 'var(--primary-light)' : 'var(--card-bg)' }}>
                     <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: isEditing ? 'var(--primary-color)' : 'inherit' }}>
                         {isEditing ? <PenTool size={16} /> : <Plus size={16} />} 
                         {isEditing ? 'Editando Despesa' : 'Lançar Nova Despesa'}
@@ -217,7 +217,7 @@ export default function ListaDespesas({ serviceOrderId, orderStatus, userRole, s
                                     step="0.01"
                                     disabled={formData.expenseType === 'DESLOCAMENTO_KM'}
                                     className="form-input" 
-                                    style={formData.expenseType === 'DESLOCAMENTO_KM' ? { backgroundColor: '#f0fdf4', color: 'var(--primary-color)', fontWeight: 'bold' } : {}}
+                                    style={formData.expenseType === 'DESLOCAMENTO_KM' ? { backgroundColor: 'var(--primary-light)', color: 'var(--primary-color)', fontWeight: 'bold' } : {}}
                                     placeholder="0.00"
                                     value={formData.expenseType === 'DESLOCAMENTO_KM' ? formData.value : formData.unitValue}
                                     onChange={(e) => {
@@ -241,7 +241,7 @@ export default function ListaDespesas({ serviceOrderId, orderStatus, userRole, s
                                     <input 
                                         type="number" 
                                         className="form-input" 
-                                        style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed', fontWeight: 'bold' }}
+                                        style={{ backgroundColor: 'var(--border-color)', cursor: 'not-allowed', fontWeight: 'bold' }}
                                         value={formData.value}
                                         disabled
                                     />
@@ -302,7 +302,7 @@ export default function ListaDespesas({ serviceOrderId, orderStatus, userRole, s
             )}
 
             <div className="despesas-list">
-                <div className="despesas-header-list" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #edf2f7', paddingBottom: '0.5rem' }}>
+                <div className="despesas-header-list" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
                     <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
                         <Receipt size={18} /> Histórico de Despesas
                     </h4>
@@ -319,12 +319,12 @@ export default function ListaDespesas({ serviceOrderId, orderStatus, userRole, s
                 ) : (
                     <ul className="items-ul" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                         {despesas.map(d => (
-                            <li key={d.id} className="item-li" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', border: '1px solid #edf2f7', borderRadius: '0.5rem', marginBottom: '0.75rem', backgroundColor: '#fff' }}>
+                            <li key={d.id} className="item-li" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem', marginBottom: '0.75rem', backgroundColor: 'var(--card-bg)' }}>
                                 <div className="item-info">
                                     <div className="item-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
                                         <strong style={{ fontSize: '0.95rem' }}>{d.expenseTypeLabel}</strong>
                                         {d.quantity && (
-                                            <span style={{ fontSize: '0.75rem', backgroundColor: '#e2e8f0', padding: '0.1rem 0.4rem', borderRadius: '0.25rem' }}>
+                                            <span style={{ fontSize: '0.75rem', backgroundColor: 'var(--border-color)', padding: '0.1rem 0.4rem', borderRadius: '0.25rem' }}>
                                                 {d.quantity} {
                                                     d.expenseType === 'DESLOCAMENTO_KM' ? 'km' : 
                                                     (d.expenseType === 'HOSPEDAGEM' || d.expenseType === 'ALIMENTACAO') ? 'dias' : 'un'

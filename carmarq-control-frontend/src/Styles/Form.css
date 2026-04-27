@@ -1,11 +1,11 @@
 /* src/Styles/Form.css */
 
 .form-card {
-    background: white;
+    background: var(--card-bg);
     padding: 2rem;
     border-radius: 8px;
     border: 1px solid var(--border-color, #e5e7eb);
-    max-width: 800px;
+    max-width: 100%;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     margin-top: 1.5rem;
 }
@@ -44,7 +44,7 @@
     border-radius: 6px;
     font-size: 0.95rem;
     transition: border-color 0.2s, box-shadow 0.2s;
-    background-color: #fff;
+    background-color: var(--card-bg);
 }
 
 .form-input:focus {
@@ -117,7 +117,7 @@ textarea.form-input {
 }
 
 .modal-content {
-    background: white;
+    background: var(--card-bg);
     padding: 2rem;
     border-radius: 12px;
     width: 100%;

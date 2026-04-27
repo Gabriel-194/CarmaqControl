@@ -53,7 +53,7 @@
 }
 
 .btn-secondary {
-    background-color: white;
+    background-color: var(--card-bg);
     border: 1px solid var(--border-color);
     padding: 0 1.5rem;
     border-radius: 6px;
@@ -67,7 +67,7 @@
 
 /* Tabela */
 .table-container {
-    background: white;
+    background: var(--card-bg);
     border-radius: 8px;
     border: 1px solid var(--border-color);
     overflow: hidden;
@@ -81,7 +81,7 @@
 }
 
 .data-table th {
-    background-color: #f9fafb;
+    background-color: var(--background-color);
     padding: 1rem;
     font-weight: 600;
     color: var(--text-muted);
@@ -97,8 +97,12 @@
     color: var(--text-color);
 }
 
-.data-table tr:hover {
-    background-color: #f3f4f6;
+.ordens-page .data-table tbody tr {
+    transition: background-color 0.2s ease-in-out;
+}
+
+.ordens-page .data-table tbody tr:hover {
+    background-color: #eefbf4;
     cursor: pointer;
 }
 
@@ -108,11 +112,46 @@
 
 /* Badges de Status */
 .status-badge {
-    padding: 0.25rem 0.75rem;
-    border-radius: 999px;
+    display: inline-block;
+    padding: 0.4rem 0.75rem;
+    border-radius: 12px; /* Reduzido de 999px para suportar quebras sem cortar cantos */
     font-size: 0.75rem;
     font-weight: 600;
+    text-align: center;
+    line-height: 1.3;
 }
 
 .status-aberto { background-color: #e0f2fe; color: #0284c7; }
 .status-em-andamento { background-color: #fef3c7; color: #d97706; }
+
+.service-type-badge {
+    display: inline-block;
+    font-size: 0.8rem;
+    padding: 0;
+    border-radius: 0;
+    font-weight: 700;
+    border: none;
+    background: transparent;
+}
+
+/* Modo claro: Instalação = verde, Manutenção = azul */
+.service-type-installation {
+    color: #059669;
+}
+
+.service-type-maintenance {
+    color: #2563eb;
+}
+
+[data-theme='dark'] .ordens-page .data-table tbody tr:hover {
+    background-color: var(--table-hover-bg);
+}
+
+/* Modo escuro: Instalação = verde, Manutenção = azul */
+[data-theme='dark'] .service-type-installation {
+    color: #34d399;
+}
+
+[data-theme='dark'] .service-type-maintenance {
+    color: #60a5fa;
+}
