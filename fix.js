@@ -1,0 +1,1 @@
+const fs = require('fs'); let f = fs.readFileSync('carmarq-control-frontend/src/Pages/Ordens.jsx', 'utf8'); f = f.replace('<option value="PAGAS">Pagas</option>', ''); f = f.replace('<option value="PAGO">Paga</option>', '<option value="PAGO">Pagas</option>'); fs.writeFileSync('carmarq-control-frontend/src/Pages/Ordens.jsx', f, 'utf8');

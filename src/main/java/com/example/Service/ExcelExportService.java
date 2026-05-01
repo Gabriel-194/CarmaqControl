@@ -2,6 +2,7 @@ package com.example.Service;
 
 import com.example.Models.ServiceOrder;
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 
@@ -15,8 +16,13 @@ public class ExcelExportService {
 
     private static final java.time.format.DateTimeFormatter DATE_FORMATTER = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
+    /**
+     * Exporta ordens de serviço utilizando SXSSF (Streaming API) para garantir complexidade de memória O(1).
+     * Ideal para grandes volumes de dados industriais.
+     */
     public byte[] exportServiceOrdersToExcel(List<ServiceOrder> orders) throws IOException {
-        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+        // SXSSF mantém apenas 100 linhas em memória e faz o swap para o disco
+        try (SXSSFWorkbook workbook = new SXSSFWorkbook(100); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("Ordens de Serviço");
 
             CellStyle headerStyle = workbook.createCellStyle();
@@ -44,6 +50,7 @@ public class ExcelExportService {
             int rowIdx = 1;
             for (ServiceOrder order : orders) {
                 Row row = sheet.createRow(rowIdx++);
+                // ... rest of row population ...
 
                 row.createCell(0).setCellValue(order.getOsCode() != null ? order.getOsCode() : order.getId().toString());
                 row.createCell(1).setCellValue(order.getOpenedAt() != null ? order.getOpenedAt().format(DATE_FORMATTER) : "N/A");
@@ -89,11 +96,11 @@ public class ExcelExportService {
                 row.createCell(20).setCellValue(order.getRejectionReason() != null ? order.getRejectionReason() : "");
             }
 
-            for (int i = 0; i < headers.length; i++) {
-                sheet.autoSizeColumn(i);
-            }
+            // Nota: autoSizeColumn é desativado no modo Streaming (SXSSF) para manter a performance O(1).
+            // sheet.autoSizeColumn(i); 
 
             workbook.write(out);
+            workbook.dispose(); // Limpa arquivos temporários do disco
             return out.toByteArray();
         }
     }

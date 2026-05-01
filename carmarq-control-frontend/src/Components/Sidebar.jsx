@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, ClipboardList, LogOut, Users, Building2, Cog, Menu, X, Moon, Sun } from 'lucide-react'
+import { LayoutDashboard, ClipboardList, LogOut, Users, Building2, Cog, Menu, X, Moon, Sun, CirclePlus } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import axios from 'axios'
@@ -45,7 +45,7 @@ export default function Sidebar() {
                 <button className="mobile-toggle" onClick={() => setIsOpen(true)}>
                     <Menu size={24} />
                 </button>
-                <h2 className="mobile-title">CarmarqControl</h2>
+                <h2 className="mobile-title">Carmaq Control</h2>
             </div>
 
             {/* Overlay para escurecer o fundo no mobile */}
@@ -55,7 +55,7 @@ export default function Sidebar() {
                 <div className="sidebar-header">
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', marginBottom: '1rem' }}>
                         <img src={logo} alt="Carmaq Logo" className="sidebar-logo" style={{ maxWidth: '160px' }} />
-                        <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--primary-color)', marginTop: '0.75rem' }}>CarmarqControl</span>
+                        <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--primary-color)', marginTop: '0.75rem' }}>Carmaq Control</span>
                     </div>
                     <button className="mobile-close" onClick={closeSidebar}>
                         <X size={24} />
@@ -75,7 +75,7 @@ export default function Sidebar() {
 
                     {(user.role === 'PROPRIETARIO' || user.role === 'TECNICO') && (
                         <Link to="/nova-os" className={getLinkClass('/nova-os')} onClick={closeSidebar}>
-                            <ClipboardList className="icon" />
+                            <CirclePlus className="icon" />
                             Nova OS
                         </Link>
                     )}

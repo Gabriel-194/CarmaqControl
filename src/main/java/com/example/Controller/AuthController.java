@@ -28,7 +28,7 @@ public class AuthController {
     private final UsuarioRepository usuarioRepository;
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponseDTO> login(@RequestBody LoginRequestDTO loginRequest, HttpServletResponse response) {
+    public ResponseEntity<LoginResponseDTO> login(@jakarta.validation.Valid @RequestBody LoginRequestDTO loginRequest, HttpServletResponse response) {
         try {
             LoginResponseDTO res = authService.login(loginRequest, response);
             if (res.getSuccess()) {
@@ -46,7 +46,7 @@ public class AuthController {
     public ResponseEntity<Map<String, Object>> validateToken(HttpServletRequest request) {
         String token = extractToken(request);
 
-        if (token == null || !jwtService.isTokenValid(token)) {
+        if (token == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("valid", false));
         }
 
@@ -55,6 +55,12 @@ public class AuthController {
 
         if (userOpt.isPresent()) {
             Usuario user = userOpt.get();
+            
+            // SEGURANÇA: Validar token incluindo estado do usuário
+            if (!jwtService.isTokenValid(token, user)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("valid", false));
+            }
+            
             Map<String, Object> response = new HashMap<>();
 
             // AQUI ESTÁ A CORREÇÃO:

@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class RateLimitingFilter implements Filter {
 
     private static final int MAX_REQUESTS_PER_MINUTE = 100;
-    private static final int MAX_LOGIN_REQUESTS_PER_MINUTE = 5;
+    private static final int MAX_LOGIN_REQUESTS_PER_MINUTE = 10;
     
     // Cache de Buckets: Chave Única (IP + Tipo) -> Bucket
     private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
@@ -69,16 +69,15 @@ public class RateLimitingFilter implements Filter {
     }
 
     private String getClientIp(HttpServletRequest request) {
-        // Hardening: Em ambientes expostos, o X-Forwarded-For pode ser forjado.
-        // Se estivermos atrás de um Load Balancer (como AWS/Heroku/Cloudflare), 
-        // este header deve ser validado. Caso contrário, use o IP real da conexão.
+        // SEGURANÇA: Desativamos a confiança no X-Forwarded-For por padrão para evitar bypass de Rate Limit (IP Spoofing).
+        // Em um ambiente real com Proxy Reverso (Nginx/Cloudflare), deve-se validar se o remoteAddr é um IP confiável.
         
+        /* 
         String xfHeader = request.getHeader("X-Forwarded-For");
         if (xfHeader != null && !xfHeader.isEmpty()) {
-            // Pega o primeiro IP da lista, mas CUIDADO: isso é bypassável sem um Trusted Proxy.
-            // Em uma implantação real, deveríamos validar se o IP remoto é de um proxy confiável.
             return xfHeader.split(",")[0].trim();
         }
+        */
         
         return request.getRemoteAddr();
     }

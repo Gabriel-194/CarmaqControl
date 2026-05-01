@@ -63,7 +63,7 @@ export default function Login() {
                     <div className="logo-box" style={{ background: 'transparent', height: 'auto', width: 'auto', display: 'flex', justifyContent: 'center' }}>
                         <img src={logo} alt="Carmaq" style={{ maxWidth: '240px', height: 'auto' }} />
                     </div>
-                    <h1 style={{ marginBottom: '0.25rem', marginTop: '0.5rem', color: 'var(--text-color)', fontSize: '1.6rem' }}>CarmarqControl</h1>
+                    <h1 style={{ marginBottom: '0.25rem', marginTop: '0.5rem', color: 'var(--text-color)', fontSize: '1.6rem' }}>Carmaq&nbsp;Control</h1>
                     <p style={{ color: 'var(--text-muted)' }}>Acesso ao Sistema</p>
                 </div>
 

@@ -19,6 +19,21 @@ export default function Usuarios() {
     const [formData, setFormData] = useState({ nome: '', email: '', telefone: '', role: 'TECNICO', senha: '' })
     const [formErrors, setFormErrors] = useState({})
 
+    const getUserInitials = (fullName) => {
+        if (!fullName || typeof fullName !== 'string') return 'U'
+        const parts = fullName.trim().split(/\s+/).filter(Boolean)
+        if (parts.length === 0) return 'U'
+        if (parts.length === 1) return parts[0][0].toUpperCase()
+        return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+    }
+
+    const getDisplayName = (name, max = 24) => {
+        if (!name || typeof name !== 'string') return ''
+        const clean = name.trim()
+        if (clean.length <= max) return clean
+        return `${clean.slice(0, max - 1)}…`
+    }
+
     useEffect(() => {
         carregarUsuarios()
     }, [])
@@ -151,10 +166,13 @@ export default function Usuarios() {
                         {usuarios.filter(u => activeTab === 'ativos' ? u.ativo : !u.ativo).map(user => (
                             <div key={user.id} className="user-card">
                                 <div className="user-avatar-large">
-                                    {user.nome[0].toUpperCase()}
+                                    {getUserInitials(user.nome)}
                                 </div>
                                 <div className="user-card-info">
-                                    <h3>{user.nome} {!user.ativo && <span style={{color:'red', fontSize:'12px'}}>(Inativo)</span>}</h3>
+                                    <h3 title={user.nome}>
+                                        <span className="user-name">{getDisplayName(user.nome)}</span>
+                                        {!user.ativo && <span style={{color:'red', fontSize:'12px'}}>(Inativo)</span>}
+                                    </h3>
                                     <p title={user.email}>{user.email}</p>
                                     <span className={`role-badge role-${user.role.toLowerCase()}`}>
                                         {user.role}

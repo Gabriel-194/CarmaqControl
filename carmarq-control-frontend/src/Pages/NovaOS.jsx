@@ -36,12 +36,12 @@ const fieldsByType = {
 const fieldLabels = {
     laserSize: 'Tamanho da Mesa',
     laserKind: 'Tipo (Fechada / Aberta)',
-    laserPower: 'Potência (W)',
+    laserPower: 'Pot�ncia (W)',
     machineSize: 'Tamanho',
     tonnage: 'Tonelagem',
     command: 'Comando',
-    force: 'Força',
-    diameter: 'Diâmetro máximo (mm)',
+    force: 'For�a',
+    diameter: 'Di�metro m�ximo (mm)',
     rollerCount: 'Quantidade de Rolos',
 }
 
@@ -149,7 +149,10 @@ export default function NovaOS() {
                     machineId: formData.maquinaId ? parseInt(formData.maquinaId) : null,
                     serviceValue: formData.valorServico ? parseFloat(formData.valorServico) : 0,
                     travelValue: 0,
-                    displacementValue: 0
+                    displacementValue: 0,
+                    foodValue: formData.foodValue ? parseFloat(formData.foodValue) : 0,
+                    tollValue: formData.tollValue ? parseFloat(formData.tollValue) : 0,
+                    accommodationValue: formData.accommodationValue ? parseFloat(formData.accommodationValue) : 0
                 }
                 const res = await axios.post(`${API_BASE}/service-orders/preview`, payload, { withCredentials: true })
                 setPreviewData(res.data)
@@ -160,7 +163,7 @@ export default function NovaOS() {
 
         const timer = setTimeout(fetchPreview, 500) // Debounce de 500ms
         return () => clearTimeout(timer)
-    }, [formData.clienteId, formData.maquinaId, formData.valorServico, formData.valorViagem, formData.valorDeslocamento])
+    }, [formData.clienteId, formData.maquinaId, formData.valorServico, formData.foodValue, formData.tollValue, formData.accommodationValue])
 
     // Quando a máquina muda, busca sugestões e atualiza valor de instalação se já selecionado
     const handleMachineChange = (machineId) => {
@@ -326,21 +329,11 @@ export default function NovaOS() {
                                 {formErrors.machineId && <span className="error-message">{formErrors.machineId}</span>}
                             </div>
 
-                            {/* Preview de Especificações Técnicas da Máquina */}
                             {selectedMachine && (
-                                <div className="machine-specs-preview" style={{ 
-                                    backgroundColor: '#f9fafb', 
-                                    border: '1px solid #e5e7eb', 
-                                    borderRadius: '8px', 
-                                    padding: '1rem', 
-                                    marginTop: '0.5rem',
-                                    display: 'grid',
-                                    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-                                    gap: '1rem'
-                                }}>
-                                    <div style={{ gridColumn: '1 / -1', borderBottom: '1px solid #eee', paddingBottom: '0.5rem', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <div className="machine-specs-preview">
+                                    <div className="machine-specs-header">
                                         <Cog size={16} color="var(--primary-color)" />
-                                        <span style={{ fontWeight: '700', fontSize: '0.85rem', color: 'var(--primary-color)', textTransform: 'uppercase' }}>Especificações Técnicas</span>
+                                        <span className="machine-specs-title">Especificações Técnicas</span>
                                     </div>
                                     
                                     {fieldsByType[selectedMachine.machineType]?.map(field => {
@@ -348,9 +341,9 @@ export default function NovaOS() {
                                         if (value === null || value === undefined || value === '') return null;
                                         
                                         return (
-                                            <div key={field} style={{ display: 'flex', flexDirection: 'column' }}>
-                                                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '600' }}>{fieldLabels[field]}</span>
-                                                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#374151' }}>
+                                            <div key={field} className="machine-spec-item">
+                                                <span className="machine-spec-label">{fieldLabels[field]}</span>
+                                                <span className="machine-spec-value">
                                                     {field === 'laserPower' ? `${value}W` : 
                                                      field === 'diameter' ? `${value}mm` : 
                                                      field === 'tonnage' ? `${value}T` : 
@@ -446,6 +439,49 @@ export default function NovaOS() {
                                         {formErrors.manutencaoOrigin && <span className="error-message">{formErrors.manutencaoOrigin}</span>}
                                     </div>
                                 )}
+
+                                {/* Campos de Despesas Extras (Reembolso) */}
+                                <div className="form-group">
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <DollarSign size={16} /> Alimentação (Reembolso)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        className="form-input"
+                                        placeholder="0.00"
+                                        value={formData.foodValue}
+                                        onChange={e => setFormData({ ...formData, foodValue: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className="form-group">
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <MapPin size={16} /> Pedágio (Reembolso)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        className="form-input"
+                                        placeholder="0.00"
+                                        value={formData.tollValue}
+                                        onChange={e => setFormData({ ...formData, tollValue: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className="form-group">
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <Package size={16} /> Hospedagem (Reembolso)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        className="form-input"
+                                        placeholder="0.00"
+                                        value={formData.accommodationValue}
+                                        onChange={e => setFormData({ ...formData, accommodationValue: e.target.value })}
+                                    />
+                                </div>
                             </div>
 
                             {/* Valor do Serviço (Mão de Obra) */}
@@ -470,9 +506,8 @@ export default function NovaOS() {
                                     type="number"
                                     step="0.01"
                                     disabled={formData.tipoServico === 'INSTALACAO' || formData.tipoServico === 'MANUTENCAO'}
-                                    className={`form-input ${formErrors.serviceValue ? 'input-error' : ''}`}
+                                    className={`form-input ${(formData.tipoServico === 'INSTALACAO' || formData.tipoServico === 'MANUTENCAO') ? 'novaos-disabled-input' : ''} ${formErrors.serviceValue ? 'input-error' : ''}`}
                                     placeholder={formData.tipoServico === 'MANUTENCAO' ? 'Cálculo dinâmico por horas...' : '0.00'}
-                                    style={(formData.tipoServico === 'INSTALACAO' || formData.tipoServico === 'MANUTENCAO') ? { backgroundColor: '#f3f4f6', cursor: 'not-allowed' } : {}}
                                     value={formData.valorServico}
                                     onChange={e => setFormData({ ...formData, valorServico: e.target.value })}
                                 />
@@ -542,11 +577,11 @@ export default function NovaOS() {
                                             <span className="value">R$ {(previewData.partsValue || 0).toFixed(2)}</span>
                                         </div>
                                         <div className="finance-line">
-                                            <span>Despesas extras</span>
-                                            <span className="value">R$ {(previewData.expensesValue || 0).toFixed(2)}</span>
+                                            <span>Reembolso (Despesas)</span>
+                                            <span className="value">R$ {(previewData.reimbursementValue || 0).toFixed(2)}</span>
                                         </div>
                                         <div className="finance-line" style={{ color: '#ef4444', borderTop: '1px dashed #eee', marginTop: '0.5rem', paddingTop: '0.5rem' }}>
-                                            <span>Pgto Técnico (10% sobre Serviços)</span>
+                                            <span>Pgto Técnico (10% + Reembolso)</span>
                                             <span className="value">- R$ {(previewData.technicianPayment || 0).toFixed(2)}</span>
                                         </div>
                                         <div className="finance-line total-line">
@@ -604,3 +639,5 @@ export default function NovaOS() {
         </div>
     )
 }
+
+

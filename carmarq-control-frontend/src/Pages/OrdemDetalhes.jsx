@@ -246,7 +246,7 @@ export default function OrdemDetalhes() {
                             </div>
                             <div className="detail-row">
                                 <strong>Data do Atendimento:</strong>
-                                <p>{osData.serviceDate ? new Date(osData.serviceDate).toLocaleDateString('pt-BR') : 'NÃ£o informada'}</p>
+                                <p>{osData.serviceDate ? String(osData.serviceDate).split('-').reverse().join('/') : 'Não informada'}</p>
                             </div>
                             {osData.serviceType && (
                                 <>
@@ -776,3 +776,4 @@ export default function OrdemDetalhes() {
         </div>
     )
 }
+

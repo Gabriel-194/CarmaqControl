@@ -31,3 +31,4 @@ export const fieldsByType = {
     CALANDRA: ['machineSize', 'command', 'force', 'diameter', 'rollerCount'],
     GRAVADORA_LASER: ['machineSize', 'laserPower'],
 }
+

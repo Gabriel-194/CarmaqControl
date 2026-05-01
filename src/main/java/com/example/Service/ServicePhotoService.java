@@ -86,13 +86,20 @@ public class ServicePhotoService {
     }
 
     @Transactional
-    public void deletePhoto(Long photoId) throws IOException {
+    public void deletePhoto(Long photoId, Long serviceOrderId) throws IOException {
+        validateOsOwnership(serviceOrderId);
+        
         ServicePhoto photo = servicePhotoRepository.findById(photoId)
                 .orElseThrow(() -> new RuntimeException("Foto não encontrada com id " + photoId));
         
+        // SEGURANÇA CRÍTICA (IDOR Fix): Validar que a foto pertence à OS informada
+        ServiceOrder photoOrder = photo.getServiceOrder();
+        if (!photoOrder.getId().equals(serviceOrderId)) {
+            throw new RuntimeException("Acesso negado: Esta foto não pertence à Ordem de Serviço especificada.");
+        }
+        
         // Validação de workflow: permite exclusão de fotos em qualquer estado, exceto se já estiver PAGO.
-        ServiceOrder order = photo.getServiceOrder();
-        if ("PAGO".equals(order.getStatus())) {
+        if ("PAGO".equals(photoOrder.getStatus())) {
             throw new RuntimeException("Fotos não podem ser excluídas de uma OS PAGA");
         }
 

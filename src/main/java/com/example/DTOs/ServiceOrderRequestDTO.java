@@ -62,4 +62,9 @@ public class ServiceOrderRequestDTO {
     private Double travelValue;
     private Double displacementValue;
     private Double reimbursementValue;
+
+    // Campos detalhados de despesas (serão somados em reimbursementValue)
+    private Double foodValue;
+    private Double tollValue;
+    private Double accommodationValue;
 }

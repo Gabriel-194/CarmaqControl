@@ -97,11 +97,11 @@ const CardBreakdownTooltip = ({ cardType, month, year, children }) => {
                     }}
                 >
                     {loading ? (
-                        <div style={{ padding: '1rem', textAlign: 'center', color: '#999', fontSize: '0.8rem' }}>
+                        <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
                             Carregando detalhamento...
                         </div>
                     ) : !breakdown || !breakdown.orders || breakdown.orders.length === 0 ? (
-                        <div style={{ padding: '1rem', textAlign: 'center', color: '#999', fontSize: '0.8rem' }}>
+                        <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
                             Nenhuma OS encontrada para este período.
                         </div>
                     ) : (
@@ -115,10 +115,13 @@ const CardBreakdownTooltip = ({ cardType, month, year, children }) => {
                             <div className="tooltip-body" style={{ padding: 0 }}>
                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
                                     <thead>
-                                        <tr style={{ borderBottom: '1px solid rgba(0,0,0,0.08)', background: 'rgba(0,0,0,0.02)' }}>
-                                            <th style={{ padding: '0.4rem 0.6rem', textAlign: 'left', fontWeight: 600, color: '#555' }}>OS</th>
-                                            <th style={{ padding: '0.4rem 0.6rem', textAlign: 'left', fontWeight: 600, color: '#555' }}>Cliente</th>
-                                            <th style={{ padding: '0.4rem 0.6rem', textAlign: 'right', fontWeight: 600, color: '#555' }}>Valor</th>
+                                        <tr style={{ 
+                                            borderBottom: '1px solid var(--border-color)', 
+                                            background: 'var(--table-header-bg, rgba(16,185,129,0.1))'
+                                        }}>
+                                            <th style={{ padding: '0.4rem 0.6rem', textAlign: 'left', fontWeight: 600, color: 'var(--text-muted)' }}>OS</th>
+                                            <th style={{ padding: '0.4rem 0.6rem', textAlign: 'left', fontWeight: 600, color: 'var(--text-muted)' }}>Cliente</th>
+                                            <th style={{ padding: '0.4rem 0.6rem', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)' }}>Valor</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -126,14 +129,14 @@ const CardBreakdownTooltip = ({ cardType, month, year, children }) => {
                                             <tr
                                                 key={order.id || idx}
                                                 style={{
-                                                    borderBottom: '1px solid rgba(0,0,0,0.04)',
-                                                    background: idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.015)'
+                                                    borderBottom: '1px solid var(--border-color)',
+                                                    background: idx % 2 === 0 ? 'transparent' : 'var(--table-hover-bg, rgba(16,185,129,0.05))'
                                                 }}
                                             >
                                                 <td style={{ padding: '0.35rem 0.6rem', fontWeight: 600, color: 'var(--primary-color, #10b981)', whiteSpace: 'nowrap' }}>
                                                     {order.osCode}
                                                 </td>
-                                                <td style={{ padding: '0.35rem 0.6rem', color: '#333', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                <td style={{ padding: '0.35rem 0.6rem', color: 'var(--text-color)', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                     {order.clientName}
                                                 </td>
                                                 <td style={{

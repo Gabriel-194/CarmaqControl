@@ -52,12 +52,14 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneralException(Exception e) {
+        // Log detalhado internamente (seguro)
         System.err.println("Unexpected Error: " + e.getMessage());
         e.printStackTrace();
         
         Map<String, Object> response = new HashMap<>();
         response.put("success", false);
-        response.put("message", "Erro interno no servidor: " + e.getMessage());
+        // SEGURANÇA: Mensagem genérica para o cliente, ocultando detalhes técnicos
+        response.put("message", "Ocorreu um erro interno no servidor. Por favor, tente novamente mais tarde.");
         
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }

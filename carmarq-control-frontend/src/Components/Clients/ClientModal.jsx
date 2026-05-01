@@ -64,7 +64,7 @@ const ClientModal = ({ isOpen, onClose, client }) => {
         setLoading(true);
         try {
             // Usando CNPJ.ws que costuma retornar Inscrições Estaduais mais facilmente
-            const res = await axios.get(`https://publica.cnpj.ws/cnpj/${cnpj}`);
+            const res = await axios.get(`https://publica.cnpj.ws/cnpj/${cnpj}`, { withCredentials: false });
             const data = res.data;
             
             // Pega a primeira IE disponível se existir
@@ -90,7 +90,7 @@ const ClientModal = ({ isOpen, onClose, client }) => {
             console.error("Erro ao buscar CNPJ (publica.cnpj.ws)", error);
             // Se falhar o CNPJ.ws, tentamos a BrasilAPI como fallback (mas sem a IE garantida)
             try {
-                const res = await axios.get(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+                const res = await axios.get(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`, { withCredentials: false });
                 const data = res.data;
                 setFormData(prev => ({
                     ...prev,
@@ -114,7 +114,7 @@ const ClientModal = ({ isOpen, onClose, client }) => {
 
         if (cep.length === 8) {
             try {
-                const viaCepResponse = await axios.get(`https://viacep.com.br/ws/${cep}/json/`);
+                const viaCepResponse = await axios.get(`https://viacep.com.br/ws/${cep}/json/`, { withCredentials: false });
                 if (!viaCepResponse.data.erro) {
                     const data = viaCepResponse.data;
                     const fullAddress = `${data.logradouro}, ${data.bairro}, ${data.localidade} - ${data.uf}`;
@@ -122,7 +122,8 @@ const ClientModal = ({ isOpen, onClose, client }) => {
 
                     try {
                         const osmResponse = await axios.get(`https://nominatim.openstreetmap.org/search`, {
-                            params: { format: 'json', q: fullAddress, limit: 1 }
+                            params: { format: 'json', q: fullAddress, limit: 1 },
+                            withCredentials: false
                         });
                         
                         if (osmResponse.data && osmResponse.data.length > 0) {

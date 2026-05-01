@@ -75,8 +75,9 @@ public class ServicePhotoController {
     @DeleteMapping("/{photoId}")
     @PreAuthorize("hasAnyAuthority('PROPRIETARIO', 'TECNICO')")
     public ResponseEntity<Void> deletePhoto(
-            @PathVariable(name = "serviceOrderId") Long serviceOrderId, @PathVariable(name = "photoId") Long photoId) throws IOException {
-        servicePhotoService.deletePhoto(photoId);
+            @PathVariable(name = "serviceOrderId") Long serviceOrderId, 
+            @PathVariable(name = "photoId") Long photoId) throws IOException {
+        servicePhotoService.deletePhoto(photoId, serviceOrderId);
         return ResponseEntity.noContent().build();
     }
 }

@@ -84,7 +84,7 @@ export function TecnicoDashboard() {
                 </div>
             </div>
 
-            <div className="dashboard-grid">
+            <div className="dashboard-grid tecnico-grid">
                 <CardBreakdownTooltip cardType="pending" month={month} year={year}>
                 <div className="stat-card">
                     <div className="stat-header">

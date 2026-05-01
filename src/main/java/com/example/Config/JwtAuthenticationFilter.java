@@ -52,20 +52,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (userEmail != null) {
                     var userDetails = this.usuarioService.loadUserByUsername(userEmail);
 
-                    if (jwtService.isTokenValid(token)) {
-                        System.out.println("JWT Filter: Authenticating user: " + userEmail + " with roles: " + userDetails.getAuthorities());
-                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
-                        );
-                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                        SecurityContextHolder.getContext().setAuthentication(authToken);
-                    } else {
-                        System.out.println("JWT Filter: Token invalid for user: " + userEmail);
+                    // SEGURANÇA: Validação aprimorada incluindo estado da conta (ativo/inativo)
+                    if (userDetails instanceof com.example.Models.Usuario) {
+                        com.example.Models.Usuario usuario = (com.example.Models.Usuario) userDetails;
+                        if (jwtService.isTokenValid(token, usuario)) {
+                            System.out.println("JWT Filter: Autenticando usuário: " + userEmail + " com roles: " + userDetails.getAuthorities());
+                            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
+                            authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                            SecurityContextHolder.getContext().setAuthentication(authToken);
+                        } else {
+                            System.out.println("JWT Filter: Token inválido para usuário: " + userEmail);
+                        }
                     }
                 } else {
-                    System.out.println("JWT Filter: Could not extract email from token");
+                    System.out.println("JWT Filter: Não foi possível extrair email do token");
                 }
             } catch (Exception e) {
                 System.err.println("JWT Filter Error: " + e.getMessage());

@@ -113,6 +113,7 @@ export default function Ordens() {
                             <option value="ABERTA">Aberta</option>
                             <option value="EM_ANDAMENTO">Em Andamento</option>
                             <option value="CONCLUIDA">Concluída</option>
+                            <option value="PAGO">Pagas</option>
                             <option value="CANCELADA">Cancelada</option>
                             <option value="COM_PROBLEMA">Com Problema</option>
                             <option value="REQUER_INSPECAO">Requer Inspeção</option>

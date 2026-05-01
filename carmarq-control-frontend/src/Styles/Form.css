@@ -53,6 +53,16 @@
     box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
+/* Ícone do calendário: preto no tema claro, branco no tema escuro */
+.form-input[type='date']::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    filter: invert(0);
+}
+
+[data-theme='dark'] .form-input[type='date']::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+}
+
 textarea.form-input {
     resize: vertical;
     min-height: 100px;
@@ -165,4 +175,4 @@ textarea.form-input {
     justify-content: flex-end;
     gap: 1rem;
     margin-top: 2rem;
-}
+}

@@ -138,6 +138,7 @@ public class ServiceOrderService {
             serviceValue = machine.getInstallationPrice() != null ? machine.getInstallationPrice() : 0.0;
         }
 
+        Double totalReimbursement = (dto.getReimbursementValue() != null ? dto.getReimbursementValue() : 0.0) + (dto.getFoodValue() != null ? dto.getFoodValue() : 0.0) + (dto.getTollValue() != null ? dto.getTollValue() : 0.0) + (dto.getAccommodationValue() != null ? dto.getAccommodationValue() : 0.0); 
         ServiceOrder order = ServiceOrder.builder()
                 .client(client)
                 .machine(machine)
@@ -155,7 +156,7 @@ public class ServiceOrderService {
                 .expensesValue(0.0)
                 .travelValue(travelValue)
                 .displacementValue(displacementValue)
-                .reimbursementValue(dto.getReimbursementValue() != null ? dto.getReimbursementValue() : 0.0)
+                .reimbursementValue(totalReimbursement)
                 .discountValue(discountValue)
                 .technicianPaymentStatus("A_RECEBER")
                 .osCode(generateOsCode(dto.getServiceDate() != null ? dto.getServiceDate() : LocalDate.now()))
@@ -180,7 +181,8 @@ public class ServiceOrderService {
                 .travelValue(0.0)
                 .displacementValue(0.0)
                 .expensesValue(0.0)
-                .partsValue(0.0) // No preview de criação, peças começam em zero
+                .partsValue(0.0) 
+                .reimbursementValue((dto.getReimbursementValue() != null ? dto.getReimbursementValue() : 0.0) + (dto.getFoodValue() != null ? dto.getFoodValue() : 0.0) + (dto.getTollValue() != null ? dto.getTollValue() : 0.0) + (dto.getAccommodationValue() != null ? dto.getAccommodationValue() : 0.0))
                 .build();
 
         return mapToDTO(tempOrder, currentUser.getRole());

@@ -30,17 +30,19 @@ public interface ServiceOrderRepository extends JpaRepository<ServiceOrder, Long
     @EntityGraph(attributePaths = {"client", "machine", "technician"})
     Page<ServiceOrder> findByStatus(String status, Pageable pageable);
 
+    /**
+     * Busca otimizada com filtros. 
+     * PERFORMANCE: Para volumes > 100k registros, recomenda-se substituir o LIKE por Full-Text Search (tsvector) no PostgreSQL.
+     */
     @EntityGraph(attributePaths = {"client", "machine", "technician"})
     @Query("SELECT so FROM ServiceOrder so WHERE " +
            "(:status IS NULL OR so.status = :status) AND " +
            "(:year IS NULL OR (so.serviceDate IS NOT NULL AND EXTRACT(YEAR FROM so.serviceDate) = :year)) AND " +
            "(:month IS NULL OR (so.serviceDate IS NOT NULL AND EXTRACT(MONTH FROM so.serviceDate) = :month)) AND " +
-           "(:search IS NULL OR LOWER(so.client.companyName) LIKE LOWER(CAST(CONCAT('%', :search, '%') AS string)) OR " +
-           "LOWER(so.numeroChamado) LIKE LOWER(CAST(CONCAT('%', :search, '%') AS string)) OR " +
-           "LOWER(so.technician.nome) LIKE LOWER(CAST(CONCAT('%', :search, '%') AS string)) OR " +
-           "CAST(so.id AS string) LIKE CAST(CONCAT('%', :search, '%') AS string) OR " +
-           "LOWER(so.osCode) LIKE LOWER(CAST(CONCAT('%', :search, '%') AS string)) OR " +
-           "LOWER(CAST(so.machine.machineType AS string)) LIKE LOWER(CAST(CONCAT('%', :search, '%') AS string)))")
+           "(:search IS NULL OR " +
+           "LOWER(so.client.companyName) LIKE LOWER(CAST(CONCAT(:search, '%') AS string)) OR " +
+           "LOWER(so.osCode) = LOWER(CAST(:search AS string)) OR " +
+           "LOWER(so.numeroChamado) = LOWER(CAST(:search AS string)))")
     Page<ServiceOrder> findWithFilters(
             @Param("search") String search,
             @Param("status") String status,

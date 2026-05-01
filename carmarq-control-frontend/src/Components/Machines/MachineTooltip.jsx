@@ -65,19 +65,19 @@ const MachineTooltip = ({ machine, position }) => {
             <div className="tooltip-header">
                 <h3 className="tooltip-title">{machine.model}</h3>
                 <div className="tooltip-subtitle">
-                    {typeLabels[machine.machineType] || machine.machineType} â€¢ S/N: {machine.serialNumber}
+                    {typeLabels[machine.machineType] || machine.machineType} • S/N: {machine.serialNumber}
                 </div>
             </div>
 
             <div className="tooltip-body">
                 <div className="tooltip-row">
-                    <span className="tooltip-label">InstalaÃ§Ã£o</span>
+                    <span className="tooltip-label">Instalação</span>
                     <span className="tooltip-value tooltip-price">{formatValue('installationPrice', machine.installationPrice)}</span>
                 </div>
 
                 {selectedTypeFields.length > 0 && (
                     <div className="tooltip-tech-section">
-                        <div className="tooltip-section-title">EspecificaÃ§Ãµes TÃ©cnicas</div>
+                        <div className="tooltip-section-title">Especificações Técnicas</div>
                         {selectedTypeFields.map(field => (
                             <div key={field} className="tooltip-row">
                                 <span className="tooltip-label">{fieldLabels[field]}</span>
@@ -89,7 +89,7 @@ const MachineTooltip = ({ machine, position }) => {
                 
                 {machine.description && (
                     <div className="tooltip-tech-section">
-                        <div className="tooltip-section-title">ObservaÃ§Ãµes</div>
+                        <div className="tooltip-section-title">Observações</div>
                         <div className="tooltip-value" style={{ textAlign: 'left', fontSize: '0.75rem', opacity: 0.8 }}>
                             {machine.description}
                         </div>
@@ -101,3 +101,4 @@ const MachineTooltip = ({ machine, position }) => {
 };
 
 export default MachineTooltip;
+
